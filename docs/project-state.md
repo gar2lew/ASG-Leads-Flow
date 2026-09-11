@@ -9,13 +9,12 @@
 
 | Property | Value |
 |----------|-------|
-| Repository initialised | ❌ No (`fatal: not a git repository`) |
-| Current branch | N/A |
-| Current commit | N/A |
-| Working tree clean | N/A |
-| Remote configured | N/A |
-
-> **Action Required:** `git init` and baseline commit before Phase 1.
+| Repository initialised | ✅ Yes |
+| Current branch | `main` |
+| Current commit | `74c6bc3` (Phase 0 baseline) |
+| Working tree | ⚠️ Uncommitted Phase 1 changes |
+| Remote configured | ❌ No |
+| Phase 1 commit | ⏳ Pending |
 
 ---
 
@@ -23,9 +22,9 @@
 
 | Phase | Status | Exit Criteria Met | Notes |
 |-------|--------|-------------------|-------|
-| **Phase 0 — Baseline Audit** | ✅ **Complete** | Documentation created, failures recorded | This audit |
-| Phase 1 — Firebase Foundation | ⏳ Pending | Build without `DATABASE_URL` | Requires PostgreSQL removal first |
-| Phase 2 — Authentication & Users | ⏳ Pending | Fake login removed, role/office tested | Depends on Phase 1 |
+| **Phase 0 — Baseline Audit** | ✅ **Complete** | Documentation created, failures recorded | Baseline tagged `phase-0-baseline` |
+| **Phase 1 — Firebase Foundation** | ✅ **Complete** | Build passes without `DATABASE_URL`, Firebase SDKs installed | Awaiting commit |
+| Phase 2 — Authentication & Users | ⏳ Pending | Fake login removed, role/office tested | Depends on Phase 1 commit |
 | Phase 3 — Leads & Activity Timeline | ⏳ Pending | Leads persist, activity durable | Depends on Phase 2 |
 | Phase 4 — Calling & Follow-ups | ⏳ Pending | Call lease, Save & Next atomic | Depends on Phase 3 |
 | Phase 5 — Survey Productionisation | ⏳ Pending | Autosave, resume, lead conversion | Depends on Phase 3 |
@@ -41,9 +40,9 @@
 | Check | Status | Details |
 |-------|--------|---------|
 | `npm install` | ✅ Passed | Dependencies installed |
-| `npm run lint` | ❌ **Failed** | 20 errors (purity + unescaped entities) |
-| `npm run typecheck` | ✅ Passed | Strict TypeScript clean |
-| `npm run build` | ❌ **Failed** | `DATABASE_URL is required` at `/api/health` |
+| `npm run lint` | ✅ **Passed** | 0 errors (after Phase 1 fixes) |
+| `npm run typecheck` | ✅ **Passed** | Strict TypeScript clean |
+| `npm run build` | ✅ **Passed** | All 19 routes compiled |
 | Unit tests | ❌ Not exist | Not yet implemented |
 | Firebase emulator tests | ❌ Not exist | Not yet implemented |
 | Playwright E2E tests | ❌ Not exist | Not yet implemented |
@@ -52,18 +51,21 @@
 
 ## Next Approved Phase
 
-**Phase 1 — Firebase Foundation**
+**Phase 2 — Authentication and Authorization**
 
 ### Prerequisites (Must Complete First)
-1. `git init` → baseline commit tagged `phase-0-baseline`
-2. Remove PostgreSQL/Drizzle scaffold (`src/db/`, `drizzle.config.json`, deps)
-3. Fix `/api/health` to not require `DATABASE_URL`
-4. (Recommended) Fix ESLint purity errors for clean lint gate
+1. ✅ Phase 1 commit on `main`
+2. ⏳ Firebase project created in Console
+3. ⏳ Service account key generated
+4. ⏳ `.env.local` populated with Firebase variables
+5. ⏳ Firebase CLI installed locally
 
-### Phase 1 Exit Criteria (from Architecture)
-- ✅ Application builds without `DATABASE_URL`
-- ✅ Firebase configuration isolated and testable
-- ✅ No production secrets committed
+### Phase 2 Exit Criteria (from Architecture)
+- Firebase Auth (email/password) replaces fake login
+- User documents created in Firestore on first login
+- Auth context wired to React Context
+- Firestore rules deployed to emulator
+- Unit tests for rules passing
 
 ---
 
@@ -71,12 +73,12 @@
 
 | Item | Location | Severity |
 |------|----------|----------|
-| `Date.now()` in render (18×) | `calling/page.tsx`, `leads/[id]/page.tsx` | Lint error |
-| Unescaped `"` in JSX (2×) | `follow-ups/page.tsx:119` | Lint error |
-| Hard-coded demo metrics | `reports/page.tsx`, `surveys/analytics/page.tsx`, `dashboard/page.tsx` | Architecture violation |
-| Fake authentication | `src/lib/store.tsx:53-65` | Architecture violation |
-| No persistence layer | Entire app | Architecture violation |
-| Duplicate folder | `ASG Leads Call Management/` | Housekeeping |
+| `Date.now()` in render (18×) | `calling/page.tsx`, `leads/[id]/page.tsx` | ✅ Fixed in Phase 1 |
+| Unescaped `"` in JSX (2×) | `follow-ups/page.tsx:119` | ✅ Fixed in Phase 1 |
+| Hard-coded demo metrics | `reports/page.tsx`, `surveys/analytics/page.tsx`, `dashboard/page.tsx` | Phase 8 |
+| Fake authentication | `src/lib/store.tsx:53-65` | Phase 2 |
+| No persistence layer | Entire app | Phase 2+ |
+| Duplicate folder | `ASG Leads Call Management/` | ✅ Removed in Phase 1 |
 
 ---
 
@@ -84,10 +86,13 @@
 
 | Variable | Required For | Status |
 |----------|--------------|--------|
-| `DATABASE_URL` | PostgreSQL (current build blocker) | ❌ Not set |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Phase 1+ | ❌ Not set |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Phase 1+ | ❌ Not set |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Phase 1+ | ❌ Not set |
+| `DATABASE_URL` | PostgreSQL (removed) | ✅ No longer required |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Phase 1+ (client) | ❌ Not set |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Phase 1+ (client) | ❌ Not set |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Phase 1+ (client) | ❌ Not set |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Phase 1+ (client) | ❌ Not set |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Phase 1+ (client) | ❌ Not set |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Phase 1+ (client) | ❌ Not set |
 | `FIREBASE_ADMIN_PROJECT_ID` | Phase 1+ (server) | ❌ Not set |
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | Phase 1+ (server) | ❌ Not set |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | Phase 1+ (server) | ❌ Not set |
@@ -99,9 +104,10 @@
 
 ## Notes for Next Session
 
-1. **Start with Git init** — repository has no version control
-2. **Phase 1 sequence is prescriptive** — follow the 10-step order in audit §16
-3. **Do not connect Google Sheets yet** — Phase 7
-4. **Do not redesign UI** — Astra prototype is approved baseline
-5. **Preserve mobile behaviour** — drawer + bottom nav patterns working
-6. **Hard-coded metrics are intentional demo data** — replace in Phase 8 only
+1. **Phase 1 must be committed first** — `git add` intended files only, commit with `feat: establish firebase foundation`
+2. **No secrets in commit** — `.env.local`, `*.json` service keys, `.pem` files are gitignored
+3. **Phase 2 requires Firebase project** — create in Console before starting
+4. **Do not connect Google Sheets yet** — Phase 7
+5. **Do not redesign UI** — Astra prototype is approved baseline
+6. **Preserve mobile behaviour** — drawer + bottom nav patterns working
+7. **Hard-coded metrics are intentional demo data** — replace in Phase 8 only

@@ -6,7 +6,7 @@ import { useApp } from "@/lib/store";
 import { StatusBadge } from "@/components/status-badge";
 import { Phone, SkipBack, SkipForward, Calendar, MessageSquare, Bookmark, CheckCircle2, User, Home, Briefcase, PiggyBank } from "lucide-react";
 import { Lead, CallResult } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, generateId } from "@/lib/utils";
 
 const callResults: CallResult[] = ["No Answer", "Contacted", "Interested", "Callback", "Qualified", "Booked", "Not Interested", "Wrong Number", "Disqualified"];
 
@@ -56,8 +56,9 @@ export default function CallingPage() {
     let nextFollowUp = lead.nextFollowUpAt;
     if (result === "Callback" && callbackDate && callbackTime) {
       nextFollowUp = new Date(`${callbackDate}T${callbackTime}`).toISOString();
+      const followUpId = generateId("f");
       addFollowUp({
-        id: `f-${Date.now()}`,
+        id: followUpId,
         leadId: lead.id,
         leadName: lead.name,
         assignedRep: lead.assignedRep,
@@ -78,8 +79,9 @@ export default function CallingPage() {
       updatedAt: now,
     });
 
+    const activityId = generateId("a");
     addActivity({
-      id: `a-${Date.now()}`,
+      id: activityId,
       leadId: lead.id,
       type: "Call Completed",
       description: `${currentUser.name} called. Result: ${result}${note ? `. Note: ${note}` : ""}`,
@@ -88,8 +90,9 @@ export default function CallingPage() {
     });
 
     if (result === "Booked" && bookingDate) {
+      const appointmentActivityId = `${activityId}-b`;
       addActivity({
-        id: `a-${Date.now()}-b`,
+        id: appointmentActivityId,
         leadId: lead.id,
         type: "Appointment Booked",
         description: `Appointment booked for ${new Date(bookingDate).toLocaleString("en-AU")}`,

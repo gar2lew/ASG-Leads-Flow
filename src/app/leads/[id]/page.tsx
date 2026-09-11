@@ -7,7 +7,7 @@ import { useApp } from "@/lib/store";
 import { StatusBadge } from "@/components/status-badge";
 import { Phone, Calendar, MessageSquare, RotateCcw, Bookmark, MapPin, Building2, User, ArrowLeft, Clock } from "lucide-react";
 import { LeadStatus, CallResult } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, generateId } from "@/lib/utils";
 
 const statuses: LeadStatus[] = ["New", "No Answer", "Callback", "Contacted", "Interested", "Qualified", "Booked", "Revisit", "Not Interested", "Disqualified", "Wrong Number"];
 const callResults: CallResult[] = ["No Answer", "Contacted", "Interested", "Callback", "Qualified", "Booked", "Not Interested", "Wrong Number", "Disqualified"];
@@ -61,8 +61,9 @@ export default function LeadDetailPage() {
       lastContactAt: now,
       updatedAt: now,
     });
+    const activityId = generateId("a");
     addActivity({
-      id: `a-${Date.now()}`,
+      id: activityId,
       leadId: lead.id,
       type: "Call Completed",
       description: `${currentUser.name} called. Result: ${callResult}`,
@@ -76,8 +77,9 @@ export default function LeadDetailPage() {
   const handleSaveNote = () => {
     if (!note.trim()) return;
     const now = new Date().toISOString();
+    const activityId = generateId("a");
     addActivity({
-      id: `a-${Date.now()}`,
+      id: activityId,
       leadId: lead.id,
       type: "Note Added",
       description: note,
@@ -93,8 +95,9 @@ export default function LeadDetailPage() {
     if (!followUpDate || !followUpTime) return;
     const scheduledAt = new Date(`${followUpDate}T${followUpTime}`).toISOString();
     const now = new Date().toISOString();
+    const activityId = generateId("a");
     addActivity({
-      id: `a-${Date.now()}`,
+      id: activityId,
       leadId: lead.id,
       type: "Follow-up Scheduled",
       description: `Follow up scheduled for ${new Date(scheduledAt).toLocaleString("en-AU")}`,
@@ -102,8 +105,9 @@ export default function LeadDetailPage() {
       createdBy: currentUser.name,
     });
     updateLead({ ...lead, nextFollowUpAt: scheduledAt, updatedAt: now });
+    const followUpId = generateId("f");
     addFollowUp({
-      id: `f-${Date.now()}`,
+      id: followUpId,
       leadId: lead.id,
       leadName: lead.name,
       assignedRep: lead.assignedRep,
@@ -121,8 +125,9 @@ export default function LeadDetailPage() {
   const handleSaveStatus = () => {
     if (!newStatus) return;
     const now = new Date().toISOString();
+    const activityId = generateId("a");
     addActivity({
-      id: `a-${Date.now()}`,
+      id: activityId,
       leadId: lead.id,
       type: "Status Changed",
       description: `Status changed from ${lead.status} to ${newStatus}`,

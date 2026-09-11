@@ -116,7 +116,7 @@ function FollowUpSection({
                   {new Date(fu.scheduledAt).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                 </p>
                 <p className="mt-1">Last result: <span className="font-medium text-asg-text">{fu.lastCallResult}</span></p>
-                {fu.lastNote && <p className="mt-1 line-clamp-2 italic">"{fu.lastNote}"</p>}
+                {fu.lastNote && <p className="mt-1 line-clamp-2 italic">&ldquo;{fu.lastNote}&rdquo;</p>}
               </div>
               <div className="mt-4 flex gap-2">
                 <a href={`tel:${fu.leadId ? "" : ""}`} className="asg-button-primary flex-1 text-xs py-2">

@@ -1,0 +1,156 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ============================================
+    // Helper Functions
+    // ============================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user has specific role
+    function hasRole(role) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Check if user is admin
+    function isAdmin() {
+      return hasRole('admin');
+    }
+    
+    // Check if user is manager
+    function isManager() {
+      return hasRole('manager');
+    }
+    
+    // Check if user is rep
+    function isRep() {
+      return hasRole('rep');
+    }
+    
+    // Check if user belongs to office
+    function userBelongsToOffice(officeId) {
+      return isAuthenticated() &&
+        officeId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.officeIds;
+    }
+    
+    // ============================================
+    // Default: Deny all
+    // ============================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // ============================================
+    // Users Collection
+    // ============================================
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        isManager()
+      );
+      allow write: if isAdmin() || request.auth.uid == userId;
+    }
+    
+    // ============================================
+    // Leads Collection
+    // ============================================
+    match /leads/{leadId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isManager() ||
+        userBelongsToOffice(resource.data.officeId) ||
+        request.auth.uid == resource.data.assignedRepId
+      );
+      allow write: if isAuthenticated() && (
+        isAdmin() ||
+        isManager() ||
+        request.auth.uid == resource.data.assignedRepId
+      );
+    }
+    
+    // ============================================
+    // Activities Subcollection
+    // ============================================
+    match /leads/{leadId}/activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // ============================================
+    // Follow-ups Collection
+    // ============================================
+    match /followUps/{followUpId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // ============================================
+    // Survey Sessions Collection
+    // ============================================
+    match /surveySessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // ============================================
+    // Survey Responses Subcollection
+    // ============================================
+    match /surveySessions/{sessionId}/responses/{responseId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // ============================================
+    // Imports Collection
+    // ============================================
+    match /imports/{importId} {
+      allow read: if isAuthenticated() && (isAdmin() || isManager());
+      allow write: if isAuthenticated() && (isAdmin() || isManager());
+    }
+    
+    // ============================================
+    // Offices Collection
+    // ============================================
+    match /offices/{officeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // ============================================
+    // Teams Collection
+    // ============================================
+    match /teams/{teamId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // ============================================
+    // Settings Collection
+    // ============================================
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // ============================================
+    // Audit Events Collection
+    // ============================================
+    match /auditEvents/{eventId} {
+      allow read: if isAuthenticated() && (isAdmin() || isManager());
+      allow write: if isAuthenticated() && (isAdmin() || isManager());
+    }
+    
+    // ============================================
+    // Sheet Sync Jobs Collection
+    // ============================================
+    match /sheetSyncJobs/{jobId} {
+      allow read: if isAuthenticated() && (isAdmin() || isManager());
+      allow write: if isAuthenticated() && (isAdmin() || isManager());
+    }
+  }
+}
