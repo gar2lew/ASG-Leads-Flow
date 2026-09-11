@@ -1,12 +1,21 @@
 // ============================================
-// ASG Leads — Session API Routes
+// ASG Leads — Session API Routes — HARDENED
 // ============================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { createSession, clearSession, validateSession } from "@/lib/auth/session";
+import { createSession, clearSession, validateSession, isUserDisabled, validateRequestOrigin } from "@/lib/auth/session";
 
 // POST /api/auth/session — Create session from ID token
+// CSRF protection: validates Origin header matches expected origin
 export async function POST(request: NextRequest) {
+  // CSRF protection
+  if (!(await validateRequestOrigin())) {
+    return NextResponse.json(
+      { success: false, error: "Invalid origin" },
+      { status: 403 }
+    );
+  }
+
   try {
     const { idToken } = await request.json();
     
@@ -17,12 +26,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify token and check if user is disabled
     const sessionData = await createSession(idToken);
     
     if (!sessionData) {
       return NextResponse.json(
         { success: false, error: "Invalid token or user not found" },
         { status: 401 }
+      );
+    }
+
+    // Check if user is disabled
+    const disabled = await isUserDisabled(sessionData.uid);
+    if (disabled) {
+      // Clear the session we just created
+      await clearSession();
+      return NextResponse.json(
+        { success: false, error: "Account is disabled" },
+        { status: 403 }
       );
     }
 
@@ -57,6 +78,16 @@ export async function GET() {
       return NextResponse.json(
         { success: false, error: "No valid session" },
         { status: 401 }
+      );
+    }
+
+    // Check if user is disabled
+    const disabled = await isUserDisabled(session.uid);
+    if (disabled) {
+      await clearSession();
+      return NextResponse.json(
+        { success: false, error: "Account is disabled" },
+        { status: 403 }
       );
     }
 

@@ -11,10 +11,9 @@
 |----------|-------|
 | Repository initialised | ✅ Yes |
 | Current branch | `feat/firebase-auth` |
-| Current commit | `af8a055` (Phase 1) |
-| Working tree | ⚠️ Uncommitted Phase 2 changes |
+| Starting commit | `2d12b8b` (Phase 2 initial) |
+| Working tree | ⚠️ Uncommitted Phase 2 hardening changes |
 | Remote configured | ❌ No |
-| Phase 2 commit | ⏳ Pending |
 
 ---
 
@@ -22,9 +21,9 @@
 
 | Phase | Status | Exit Criteria Met | Notes |
 |-------|--------|-------------------|-------|
-| **Phase 0 — Baseline Audit** | ✅ **Complete** | Documentation created, failures recorded | Baseline tagged `phase-0-baseline` |
-| **Phase 1 — Firebase Foundation** | ✅ **Complete** | Build passes without `DATABASE_URL`, Firebase SDKs installed | Committed as `af8a055` |
-| **Phase 2 — Authentication & Users** | ✅ **Complete** | Firebase Auth implemented, route protection, user provisioning | Awaiting commit |
+| **Phase 0 — Baseline Audit** | ✅ **Complete** | Documentation created | Baseline tagged `phase-0-baseline` |
+| **Phase 1 — Firebase Foundation** | ✅ **Complete** | Build without `DATABASE_URL` | Committed as `af8a055` |
+| **Phase 2 — Authentication & Users** | ✅ **Complete (Hardened)** | Auth implemented, route protection, tests | Awaiting final commit |
 | Phase 3 — Leads & Activity Timeline | ⏳ Pending | Leads persist, activity durable | Depends on Phase 2 |
 | Phase 4 — Calling & Follow-ups | ⏳ Pending | Call lease, Save & Next atomic | Depends on Phase 3 |
 | Phase 5 — Survey Productionisation | ⏳ Pending | Autosave, resume, lead conversion | Depends on Phase 3 |
@@ -43,8 +42,8 @@
 | `npm run lint` | ✅ **Passed** | 0 errors |
 | `npm run typecheck` | ✅ **Passed** | Strict TypeScript clean |
 | `npm run build` | ✅ **Passed** | All 22 routes compiled |
-| Unit tests | ⏳ Stub | Test structure created, needs emulator |
-| Firebase emulator tests | ⏳ Pending | Requires running emulator |
+| Authorization unit tests | ✅ **Passed** | 29 tests passing |
+| Firestore rules tests | ⏳ Structured | Requires Firebase emulator |
 | Playwright E2E tests | ❌ Not exist | Not yet implemented |
 
 ---
@@ -54,10 +53,11 @@
 **Phase 3 — Lead Persistence and Activity History**
 
 ### Prerequisites (Must Complete First)
-1. ✅ Phase 2 commit on `feat/firebase-auth`
+1. ✅ Phase 2 hardening committed
 2. ⏳ Firebase project configured
 3. ⏳ Development users seeded
 4. ⏳ Auth flow manually verified
+5. ⏳ Firestore rules tested with emulator
 
 ### Phase 3 Exit Criteria (from Architecture)
 - Leads persist across reload/session
@@ -101,7 +101,7 @@
 
 ## Notes for Next Session
 
-1. **Phase 2 must be committed first** — `git add` intended files only, commit with `feat: add firebase authentication and authorization`
+1. **Phase 2 hardening must be committed** — `git add` intended files only, commit with `fix: harden firebase authentication boundaries`
 2. **No secrets in commit** — `.env.local`, `*.json` service keys, `.pem` files are gitignored
 3. **Phase 3 requires Firebase project** — create in Console before starting
 4. **Do not connect Google Sheets yet** — Phase 7

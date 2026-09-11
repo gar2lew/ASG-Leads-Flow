@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { AppProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/auth";
-import { Shell } from "@/components/shell";
 
 export const metadata: Metadata = {
   title: "ASG Leads — Amplify Solutions Group",
@@ -29,7 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="bg-asg-cream text-asg-text antialiased">
         <AuthProvider>
           <AppProvider>
-            <Shell>{children}</Shell>
+            {children}
           </AppProvider>
         </AuthProvider>
       </body>

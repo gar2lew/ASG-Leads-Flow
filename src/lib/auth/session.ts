@@ -1,16 +1,15 @@
 // ============================================
-// ASG Leads — Session Management (Server)
+// ASG Leads — Session Management (Server) — HARDENED
 // ============================================
-// Server-side session cookie management
-// Uses Firebase Admin to verify ID tokens and set secure cookies
 
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getAdminAuth } from "@/lib/firebase/admin";
+import { getUserProfile } from "@/lib/auth/user-service";
 
 export const SESSION_COOKIE_NAME = "asg_session";
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface SessionData {
   uid: string;
@@ -19,7 +18,6 @@ export interface SessionData {
 
 export async function createSession(idToken: string): Promise<SessionData | null> {
   try {
-    // Verify the ID token with Firebase Admin
     const decodedToken = await getAdminAuth().verifyIdToken(idToken);
     
     const sessionData: SessionData = {
@@ -27,11 +25,9 @@ export async function createSession(idToken: string): Promise<SessionData | null
       email: decodedToken.email ?? null,
     };
 
-    // Create session cookie
     const expiresIn = SESSION_DURATION_MS;
     const sessionCookie = await getAdminAuth().createSessionCookie(idToken, { expiresIn });
 
-    // Set cookie
     const cookieStore = await cookies();
     cookieStore.set(SESSION_COOKIE_NAME, sessionCookie, {
       httpOnly: true,
@@ -59,7 +55,6 @@ export async function validateSession(): Promise<SessionData | null> {
     
     if (!sessionCookie) return null;
 
-    // Verify the session cookie with Firebase Admin
     const decodedClaims = await getAdminAuth().verifySessionCookie(sessionCookie, true);
     
     return {
@@ -69,4 +64,35 @@ export async function validateSession(): Promise<SessionData | null> {
   } catch {
     return null;
   }
+}
+
+export async function isUserDisabled(uid: string): Promise<boolean> {
+  try {
+    const profile = await getUserProfile(uid);
+    return profile?.status === "disabled";
+  } catch {
+    return true;
+  }
+}
+
+// CSRF protection helper
+export async function validateRequestOrigin(): Promise<boolean> {
+  const headersList = await headers();
+  const origin = headersList.get("origin");
+  const host = headersList.get("host");
+  
+  if (process.env.NODE_ENV === "production") {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const allowedOrigins = [`https://${host}`];
+    if (siteUrl) allowedOrigins.push(siteUrl);
+    
+    if (!origin) return false;
+    return allowedOrigins.includes(origin);
+  }
+  
+  if (origin) {
+    return origin.includes("localhost") || origin === `http://${host}`;
+  }
+  
+  return true;
 }

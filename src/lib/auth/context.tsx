@@ -1,6 +1,7 @@
 // ============================================
-// ASG Leads — Auth Provider
+// ASG Leads — Auth Provider — HARDENED
 // ============================================
+// Client-side auth state management with server-side session verification
 
 "use client";
 
@@ -41,8 +42,7 @@ async function fetchUserProfile(uid: string): Promise<UserProfile | null> {
   try {
     const response = await fetch(`/api/auth/profile?uid=${uid}`);
     if (!response.ok) return null;
-    const data = await response.json();
-    return data.data ?? null;
+    return await response.json();
   } catch {
     return null;
   }

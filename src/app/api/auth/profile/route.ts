@@ -1,5 +1,5 @@
 // ============================================
-// ASG Leads — User Profile API Route (Server)
+// ASG Leads — User Profile API Route (Server) — HARDENED
 // ============================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
     
     // Users can only read their own profile unless admin
     if (uid !== session.uid) {
-      // Check if requesting user is admin
       const adminProfile = await getUserProfile(session.uid);
       if (!adminProfile || adminProfile.role !== "admin") {
         return NextResponse.json(
@@ -41,7 +40,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, data: profile });
+    // Don't expose sensitive internal fields
+    const safeProfile = {
+      uid: profile.uid,
+      email: profile.email,
+      displayName: profile.displayName,
+      role: profile.role,
+      officeIds: profile.officeIds,
+      primaryOfficeId: profile.primaryOfficeId,
+      status: profile.status,
+      phone: profile.phone,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt,
+      lastLoginAt: profile.lastLoginAt,
+    };
+
+    return NextResponse.json(safeProfile);
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch profile" },
