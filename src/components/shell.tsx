@@ -3,13 +3,33 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./sidebar";
 import { MobileNav } from "./mobile-nav";
-import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useApp();
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-  if (!isAuthenticated) {
-    return <>{children}</>;
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-asg-cream">
+        <div className="text-asg-text-muted">Loading...</div>
+      </div>
+    );
+  }
+
+  // Not authenticated - don't render protected content
+  if (!user) {
+    return null;
   }
 
   return (

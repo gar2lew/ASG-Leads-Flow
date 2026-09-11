@@ -10,11 +10,11 @@
 | Property | Value |
 |----------|-------|
 | Repository initialised | ✅ Yes |
-| Current branch | `main` |
-| Current commit | `74c6bc3` (Phase 0 baseline) |
-| Working tree | ⚠️ Uncommitted Phase 1 changes |
+| Current branch | `feat/firebase-auth` |
+| Current commit | `af8a055` (Phase 1) |
+| Working tree | ⚠️ Uncommitted Phase 2 changes |
 | Remote configured | ❌ No |
-| Phase 1 commit | ⏳ Pending |
+| Phase 2 commit | ⏳ Pending |
 
 ---
 
@@ -23,8 +23,8 @@
 | Phase | Status | Exit Criteria Met | Notes |
 |-------|--------|-------------------|-------|
 | **Phase 0 — Baseline Audit** | ✅ **Complete** | Documentation created, failures recorded | Baseline tagged `phase-0-baseline` |
-| **Phase 1 — Firebase Foundation** | ✅ **Complete** | Build passes without `DATABASE_URL`, Firebase SDKs installed | Awaiting commit |
-| Phase 2 — Authentication & Users | ⏳ Pending | Fake login removed, role/office tested | Depends on Phase 1 commit |
+| **Phase 1 — Firebase Foundation** | ✅ **Complete** | Build passes without `DATABASE_URL`, Firebase SDKs installed | Committed as `af8a055` |
+| **Phase 2 — Authentication & Users** | ✅ **Complete** | Firebase Auth implemented, route protection, user provisioning | Awaiting commit |
 | Phase 3 — Leads & Activity Timeline | ⏳ Pending | Leads persist, activity durable | Depends on Phase 2 |
 | Phase 4 — Calling & Follow-ups | ⏳ Pending | Call lease, Save & Next atomic | Depends on Phase 3 |
 | Phase 5 — Survey Productionisation | ⏳ Pending | Autosave, resume, lead conversion | Depends on Phase 3 |
@@ -40,32 +40,29 @@
 | Check | Status | Details |
 |-------|--------|---------|
 | `npm install` | ✅ Passed | Dependencies installed |
-| `npm run lint` | ✅ **Passed** | 0 errors (after Phase 1 fixes) |
+| `npm run lint` | ✅ **Passed** | 0 errors |
 | `npm run typecheck` | ✅ **Passed** | Strict TypeScript clean |
-| `npm run build` | ✅ **Passed** | All 19 routes compiled |
-| Unit tests | ❌ Not exist | Not yet implemented |
-| Firebase emulator tests | ❌ Not exist | Not yet implemented |
+| `npm run build` | ✅ **Passed** | All 22 routes compiled |
+| Unit tests | ⏳ Stub | Test structure created, needs emulator |
+| Firebase emulator tests | ⏳ Pending | Requires running emulator |
 | Playwright E2E tests | ❌ Not exist | Not yet implemented |
 
 ---
 
 ## Next Approved Phase
 
-**Phase 2 — Authentication and Authorization**
+**Phase 3 — Lead Persistence and Activity History**
 
 ### Prerequisites (Must Complete First)
-1. ✅ Phase 1 commit on `main`
-2. ⏳ Firebase project created in Console
-3. ⏳ Service account key generated
-4. ⏳ `.env.local` populated with Firebase variables
-5. ⏳ Firebase CLI installed locally
+1. ✅ Phase 2 commit on `feat/firebase-auth`
+2. ⏳ Firebase project configured
+3. ⏳ Development users seeded
+4. ⏳ Auth flow manually verified
 
-### Phase 2 Exit Criteria (from Architecture)
-- Firebase Auth (email/password) replaces fake login
-- User documents created in Firestore on first login
-- Auth context wired to React Context
-- Firestore rules deployed to emulator
-- Unit tests for rules passing
+### Phase 3 Exit Criteria (from Architecture)
+- Leads persist across reload/session
+- Activity history is durable
+- Role restrictions work
 
 ---
 
@@ -76,8 +73,8 @@
 | `Date.now()` in render (18×) | `calling/page.tsx`, `leads/[id]/page.tsx` | ✅ Fixed in Phase 1 |
 | Unescaped `"` in JSX (2×) | `follow-ups/page.tsx:119` | ✅ Fixed in Phase 1 |
 | Hard-coded demo metrics | `reports/page.tsx`, `surveys/analytics/page.tsx`, `dashboard/page.tsx` | Phase 8 |
-| Fake authentication | `src/lib/store.tsx:53-65` | Phase 2 |
-| No persistence layer | Entire app | Phase 2+ |
+| Fake authentication | `src/lib/store.tsx` | ✅ Fixed in Phase 2 |
+| No persistence layer | Entire app | Phase 3 |
 | Duplicate folder | `ASG Leads Call Management/` | ✅ Removed in Phase 1 |
 
 ---
@@ -104,9 +101,9 @@
 
 ## Notes for Next Session
 
-1. **Phase 1 must be committed first** — `git add` intended files only, commit with `feat: establish firebase foundation`
+1. **Phase 2 must be committed first** — `git add` intended files only, commit with `feat: add firebase authentication and authorization`
 2. **No secrets in commit** — `.env.local`, `*.json` service keys, `.pem` files are gitignored
-3. **Phase 2 requires Firebase project** — create in Console before starting
+3. **Phase 3 requires Firebase project** — create in Console before starting
 4. **Do not connect Google Sheets yet** — Phase 7
 5. **Do not redesign UI** — Astra prototype is approved baseline
 6. **Preserve mobile behaviour** — drawer + bottom nav patterns working

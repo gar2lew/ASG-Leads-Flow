@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { AppProvider } from "@/lib/store";
+import { AuthProvider } from "@/lib/auth";
 import { Shell } from "@/components/shell";
 
 export const metadata: Metadata = {
@@ -26,9 +27,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-asg-cream text-asg-text antialiased">
-        <AppProvider>
-          <Shell>{children}</Shell>
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <Shell>{children}</Shell>
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );

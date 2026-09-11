@@ -13,12 +13,9 @@ interface AppState {
   surveySessions: SurveySession[];
   importJobs: ImportJob[];
   selectedOffice: Office | "All";
-  isAuthenticated: boolean;
 }
 
 interface AppContextType extends AppState {
-  login: (email: string, password: string) => boolean;
-  logout: () => void;
   setSelectedOffice: (office: Office | "All") => void;
   updateLead: (lead: Lead) => void;
   addLead: (lead: Lead) => void;
@@ -47,26 +44,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     surveySessions: data.surveySessions,
     importJobs: data.importJobs,
     selectedOffice: data.currentUser.office as Office | "All",
-    isAuthenticated: true,
   });
-
-  const login = useCallback((email: string, password: string) => {
-    const user = data.users.find((u) => u.email === email);
-    if (user && password.length > 0) {
-      setState((s) => ({
-        ...s,
-        currentUser: user,
-        selectedOffice: user.office as Office | "All",
-        isAuthenticated: true,
-      }));
-      return true;
-    }
-    return false;
-  }, []);
-
-  const logout = useCallback(() => {
-    setState((s) => ({ ...s, isAuthenticated: false }));
-  }, []);
 
   const setSelectedOffice = useCallback((office: Office | "All") => {
     setState((s) => ({ ...s, selectedOffice: office }));
@@ -149,8 +127,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value: AppContextType = {
     ...state,
-    login,
-    logout,
     setSelectedOffice,
     updateLead,
     addLead,

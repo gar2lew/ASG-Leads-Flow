@@ -1,23 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/store";
 import { MetricCard } from "@/components/metric-card";
 import { StatusBadge } from "@/components/status-badge";
 import { Phone, Calendar, Users, ClipboardList, ArrowRight, Clock, TrendingUp, Building2 } from "lucide-react";
 
 export default function DashboardPage() {
-  const { currentUser, getOfficeLeads, getRepLeads, followUps, selectedOffice } = useApp();
-
-  const isAdmin = currentUser.role === "Admin";
-  const isManager = currentUser.role === "Manager";
-  const isRep = currentUser.role === "Rep";
+  const { profile, isAdmin, isManager, isRep } = useAuth();
+  const { getOfficeLeads, getRepLeads, followUps, selectedOffice } = useApp();
 
   const officeLeads = getOfficeLeads();
-  const myLeads = isRep ? getRepLeads(currentUser.name) : officeLeads;
+  const myLeads = isRep && profile ? getRepLeads(profile.displayName) : officeLeads;
 
   const leadsToCall = myLeads.filter((l) => ["New", "No Answer", "Callback", "Contacted"].includes(l.status)).length;
-  const followUpsDue = followUps.filter((f) => f.assignedRep === currentUser.name && f.status === "Pending").length;
+  const followUpsDue = followUps.filter((f) => profile && f.assignedRep === profile.displayName && f.status === "Pending").length;
   const newLeads = myLeads.filter((l) => l.status === "New").length;
   const bookedAppointments = myLeads.filter((l) => l.status === "Booked").length;
 
@@ -36,11 +34,11 @@ export default function DashboardPage() {
         <div>
           <p className="text-sm text-asg-text-muted">{today}</p>
           <h1 className="mt-1 text-2xl font-semibold text-asg-text lg:text-3xl">
-            Good morning, {currentUser.name.split(" ")[0]}
+            Good morning, {profile?.displayName?.split(" ")[0] ?? "there"}
           </h1>
           <p className="mt-1 flex items-center gap-2 text-sm text-asg-text-secondary">
             <Building2 className="h-4 w-4" />
-            {selectedOffice === "All" ? "All Offices" : selectedOffice} · {currentUser.role}
+            {selectedOffice === "All" ? "All Offices" : selectedOffice} · {profile?.role ?? ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -94,11 +92,11 @@ export default function DashboardPage() {
                 <h2 className="font-semibold text-asg-text">Upcoming Callbacks</h2>
               </div>
               <div className="divide-y divide-asg-border">
-                {followUps.filter((f) => f.assignedRep === currentUser.name).length === 0 ? (
+                {followUps.filter((f) => profile && f.assignedRep === profile.displayName).length === 0 ? (
                   <p className="px-5 py-8 text-center text-sm text-asg-text-secondary">No callbacks scheduled.</p>
                 ) : (
                   followUps
-                    .filter((f) => f.assignedRep === currentUser.name)
+                    .filter((f) => profile && f.assignedRep === profile.displayName)
                     .slice(0, 4)
                     .map((fu) => (
                       <div key={fu.id} className="px-5 py-4">

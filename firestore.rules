@@ -10,10 +10,19 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    // Get user document data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Check if user is active
+    function isActive() {
+      return isAuthenticated() && getUserData().status == 'active';
+    }
+    
     // Check if user has specific role
     function hasRole(role) {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+      return isActive() && getUserData().role == role;
     }
     
     // Check if user is admin
@@ -33,8 +42,7 @@ service cloud.firestore {
     
     // Check if user belongs to office
     function userBelongsToOffice(officeId) {
-      return isAuthenticated() &&
-        officeId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.officeIds;
+      return isActive() && officeId in getUserData().officeIds;
     }
     
     // ============================================
@@ -48,28 +56,35 @@ service cloud.firestore {
     // Users Collection
     // ============================================
     match /users/{userId} {
+      // Users can read their own profile
+      // Admins and managers can read profiles for their offices
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
         isAdmin() ||
-        isManager()
+        (isManager() && userBelongsToOffice(resource.data.primaryOfficeId))
       );
-      allow write: if isAdmin() || request.auth.uid == userId;
+      
+      // Only admins can create/update users
+      allow write: if isAdmin();
     }
     
     // ============================================
     // Leads Collection
     // ============================================
     match /leads/{leadId} {
+      // Reps can read assigned leads in their office
+      // Managers can read leads in their offices
+      // Admins can read all leads
       allow read: if isAuthenticated() && (
         isAdmin() ||
-        isManager() ||
-        userBelongsToOffice(resource.data.officeId) ||
-        request.auth.uid == resource.data.assignedRepId
+        (isManager() && userBelongsToOffice(resource.data.officeId)) ||
+        (isRep() && request.auth.uid == resource.data.assignedRepId && userBelongsToOffice(resource.data.officeId))
       );
+      
+      // Only managers and admins can write leads
       allow write: if isAuthenticated() && (
         isAdmin() ||
-        isManager() ||
-        request.auth.uid == resource.data.assignedRepId
+        (isManager() && userBelongsToOffice(resource.data.officeId))
       );
     }
     
@@ -78,7 +93,7 @@ service cloud.firestore {
     // ============================================
     match /leads/{leadId}/activities/{activityId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAuthenticated() && (isAdmin() || isManager());
     }
     
     // ============================================
@@ -86,7 +101,7 @@ service cloud.firestore {
     // ============================================
     match /followUps/{followUpId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAuthenticated() && (isAdmin() || isManager());
     }
     
     // ============================================
