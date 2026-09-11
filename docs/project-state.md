@@ -12,7 +12,8 @@
 | Repository initialised | ✅ Yes |
 | Current branch | `feat/firebase-auth` |
 | Starting commit | `2d12b8b` (Phase 2 initial) |
-| Working tree | ⚠️ Uncommitted Phase 2 hardening changes |
+| Current HEAD | `436ec12` (Phase 2 hardening) |
+| Working tree | ⚠️ Uncommitted Phase 2 verification changes |
 | Remote configured | ❌ No |
 
 ---

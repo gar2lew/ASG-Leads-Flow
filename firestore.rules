@@ -58,7 +58,7 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can read their own profile
       // Admins and managers can read profiles for their offices
-      allow read: if isAuthenticated() && (
+      allow read: if isActive() && (
         request.auth.uid == userId ||
         isAdmin() ||
         (isManager() && userBelongsToOffice(resource.data.primaryOfficeId))
