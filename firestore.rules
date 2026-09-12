@@ -103,17 +103,31 @@ service cloud.firestore {
     // ============================================
     // Survey Sessions Collection
     // ============================================
+    // Server-authoritative writes; client reads restricted by office/role
     match /surveySessions/{sessionId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read: if isActive() && (
+        isAdmin() ||
+        (isManager() && userBelongsToOffice(resource.data.officeId)) ||
+        (isRep() && request.auth.uid == resource.data.repUserId && userBelongsToOffice(resource.data.officeId))
+      );
+      
+      // Only server-side writes allowed (via Admin SDK bypass)
+      // Client writes denied; all mutations go through API routes
+      allow write: if false;
     }
     
     // ============================================
     // Survey Responses Subcollection
     // ============================================
     match /surveySessions/{sessionId}/responses/{responseId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read: if isActive() && (
+        isAdmin() ||
+        (isManager() && userBelongsToOffice(get(/databases/$(database)/documents/surveySessions/$(sessionId)).data.officeId)) ||
+        (isRep() && request.auth.uid == get(/databases/$(database)/documents/surveySessions/$(sessionId)).data.repUserId)
+      );
+      
+      // Server-authoritative writes only
+      allow write: if false;
     }
     
     // ============================================
