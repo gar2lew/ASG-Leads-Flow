@@ -5,42 +5,34 @@ service cloud.firestore {
     // Helper Functions
     // ============================================
     
-    // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // Get user document data
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     
-    // Check if user is active
     function isActive() {
       return isAuthenticated() && getUserData().status == 'active';
     }
     
-    // Check if user has specific role
     function hasRole(role) {
       return isActive() && getUserData().role == role;
     }
     
-    // Check if user is admin
     function isAdmin() {
       return hasRole('admin');
     }
     
-    // Check if user is manager
     function isManager() {
       return hasRole('manager');
     }
     
-    // Check if user is rep
     function isRep() {
       return hasRole('rep');
     }
     
-    // Check if user belongs to office
     function userBelongsToOffice(officeId) {
       return isActive() && officeId in getUserData().officeIds;
     }
@@ -56,15 +48,12 @@ service cloud.firestore {
     // Users Collection
     // ============================================
     match /users/{userId} {
-      // Users can read their own profile
-      // Admins and managers can read profiles for their offices
       allow read: if isActive() && (
         request.auth.uid == userId ||
         isAdmin() ||
         (isManager() && userBelongsToOffice(resource.data.primaryOfficeId))
       );
       
-      // Only admins can create/update users
       allow write: if isAdmin();
     }
     
@@ -72,17 +61,15 @@ service cloud.firestore {
     // Leads Collection
     // ============================================
     match /leads/{leadId} {
-      // Reps can read assigned leads in their office
-      // Managers can read leads in their offices
-      // Admins can read all leads
-      allow read: if isAuthenticated() && (
+      allow read: if isActive() && (
         isAdmin() ||
         (isManager() && userBelongsToOffice(resource.data.officeId)) ||
         (isRep() && request.auth.uid == resource.data.assignedRepId && userBelongsToOffice(resource.data.officeId))
       );
       
-      // Only managers and admins can write leads
-      allow write: if isAuthenticated() && (
+      // Only admins and managers can write leads
+      // Reps have limited write access through server actions
+      allow write: if isActive() && (
         isAdmin() ||
         (isManager() && userBelongsToOffice(resource.data.officeId))
       );
@@ -92,16 +79,25 @@ service cloud.firestore {
     // Activities Subcollection
     // ============================================
     match /leads/{leadId}/activities/{activityId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (isAdmin() || isManager());
+      allow read: if isActive();
+      // Activities are append-only via server actions
+      allow write: if false;
     }
     
     // ============================================
     // Follow-ups Collection
     // ============================================
     match /followUps/{followUpId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (isAdmin() || isManager());
+      allow read: if isActive() && (
+        isAdmin() ||
+        (isManager() && userBelongsToOffice(resource.data.officeId)) ||
+        (isRep() && request.auth.uid == resource.data.assignedRepId)
+      );
+      
+      allow write: if isActive() && (
+        isAdmin() ||
+        (isManager() && userBelongsToOffice(resource.data.officeId))
+      );
     }
     
     // ============================================
@@ -124,8 +120,8 @@ service cloud.firestore {
     // Imports Collection
     // ============================================
     match /imports/{importId} {
-      allow read: if isAuthenticated() && (isAdmin() || isManager());
-      allow write: if isAuthenticated() && (isAdmin() || isManager());
+      allow read: if isActive() && (isAdmin() || isManager());
+      allow write: if isActive() && (isAdmin() || isManager());
     }
     
     // ============================================
@@ -156,16 +152,16 @@ service cloud.firestore {
     // Audit Events Collection
     // ============================================
     match /auditEvents/{eventId} {
-      allow read: if isAuthenticated() && (isAdmin() || isManager());
-      allow write: if isAuthenticated() && (isAdmin() || isManager());
+      allow read: if isActive() && (isAdmin() || isManager());
+      allow write: if isActive() && (isAdmin() || isManager());
     }
     
     // ============================================
     // Sheet Sync Jobs Collection
     // ============================================
     match /sheetSyncJobs/{jobId} {
-      allow read: if isAuthenticated() && (isAdmin() || isManager());
-      allow write: if isAuthenticated() && (isAdmin() || isManager());
+      allow read: if isActive() && (isAdmin() || isManager());
+      allow write: if isActive() && (isAdmin() || isManager());
     }
   }
 }

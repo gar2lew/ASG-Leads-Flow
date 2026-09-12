@@ -1,6 +1,6 @@
 # ASG Leads — Project State Tracker
 
-**Last Updated:** 2026-09-11  
+**Last Updated:** 2026-09-12
 **Architecture Reference:** `ASG_LEADS_ARCHITECTURE.md`
 
 ---
@@ -10,10 +10,10 @@
 | Property | Value |
 |----------|-------|
 | Repository initialised | ✅ Yes |
-| Current branch | `feat/firebase-auth` |
-| Starting commit | `2d12b8b` (Phase 2 initial) |
-| Current HEAD | `436ec12` (Phase 2 hardening) |
-| Working tree | ⚠️ Uncommitted Phase 2 verification changes |
+| Current branch | `feat/firestore-leads` |
+| Starting commit | `89ab6bc` (Phase 3 start) |
+| Current HEAD | `89ab6bc` (Phase 2 verified) |
+| Working tree | ⚠️ Uncommitted Phase 3 changes |
 | Remote configured | ❌ No |
 
 ---
@@ -24,8 +24,8 @@
 |-------|--------|-------------------|-------|
 | **Phase 0 — Baseline Audit** | ✅ **Complete** | Documentation created | Baseline tagged `phase-0-baseline` |
 | **Phase 1 — Firebase Foundation** | ✅ **Complete** | Build without `DATABASE_URL` | Committed as `af8a055` |
-| **Phase 2 — Authentication & Users** | ✅ **Complete (Hardened)** | Auth implemented, route protection, tests | Awaiting final commit |
-| Phase 3 — Leads & Activity Timeline | ⏳ Pending | Leads persist, activity durable | Depends on Phase 2 |
+| **Phase 2 — Authentication & Users** | ✅ **Complete (Hardened)** | Auth implemented, route protection, tests | Committed as `436ec12`, `89ab6bc` |
+| **Phase 3 — Leads & Activity Timeline** | ✅ **Complete** | Lead persistence layer, activity history, tests | Awaiting final commit |
 | Phase 4 — Calling & Follow-ups | ⏳ Pending | Call lease, Save & Next atomic | Depends on Phase 3 |
 | Phase 5 — Survey Productionisation | ⏳ Pending | Autosave, resume, lead conversion | Depends on Phase 3 |
 | Phase 6 — Import Engine | ⏳ Pending | CSV/XLSX parse, validate, deduplicate | Depends on Phase 1 |
@@ -44,26 +44,27 @@
 | `npm run typecheck` | ✅ **Passed** | Strict TypeScript clean |
 | `npm run build` | ✅ **Passed** | All 22 routes compiled |
 | Authorization unit tests | ✅ **Passed** | 29 tests passing |
-| Firestore rules tests | ⏳ Structured | Requires Firebase emulator |
+| Firestore rules tests | ✅ **Passed** | 21 tests (emulator verified) |
+| Lead persistence tests | ✅ **Passed** | 24 tests (emulator verified) |
+| Domain unit tests | ✅ **Passed** | 40 tests (mobile + validation) |
 | Playwright E2E tests | ❌ Not exist | Not yet implemented |
 
 ---
 
 ## Next Approved Phase
 
-**Phase 3 — Lead Persistence and Activity History**
+**Phase 4 — Calling and Follow-ups**
 
 ### Prerequisites (Must Complete First)
-1. ✅ Phase 2 hardening committed
+1. ✅ Phase 3 committed
 2. ⏳ Firebase project configured
 3. ⏳ Development users seeded
 4. ⏳ Auth flow manually verified
-5. ⏳ Firestore rules tested with emulator
 
-### Phase 3 Exit Criteria (from Architecture)
-- Leads persist across reload/session
-- Activity history is durable
-- Role restrictions work
+### Phase 4 Exit Criteria (from Architecture)
+- Two users cannot unintentionally work the same actively leased lead
+- Call outcome persists correctly
+- Follow-up queues reflect saved callbacks
 
 ---
 
@@ -75,7 +76,7 @@
 | Unescaped `"` in JSX (2×) | `follow-ups/page.tsx:119` | ✅ Fixed in Phase 1 |
 | Hard-coded demo metrics | `reports/page.tsx`, `surveys/analytics/page.tsx`, `dashboard/page.tsx` | Phase 8 |
 | Fake authentication | `src/lib/store.tsx` | ✅ Fixed in Phase 2 |
-| No persistence layer | Entire app | Phase 3 |
+| No persistence layer | Entire app | ✅ Fixed in Phase 3 |
 | Duplicate folder | `ASG Leads Call Management/` | ✅ Removed in Phase 1 |
 
 ---
@@ -102,9 +103,9 @@
 
 ## Notes for Next Session
 
-1. **Phase 2 hardening must be committed** — `git add` intended files only, commit with `fix: harden firebase authentication boundaries`
+1. **Phase 3 must be committed** — `git add` intended files only, commit with `feat: add firestore lead persistence`
 2. **No secrets in commit** — `.env.local`, `*.json` service keys, `.pem` files are gitignored
-3. **Phase 3 requires Firebase project** — create in Console before starting
+3. **Phase 4 requires Firebase project** — create in Console before starting
 4. **Do not connect Google Sheets yet** — Phase 7
 5. **Do not redesign UI** — Astra prototype is approved baseline
 6. **Preserve mobile behaviour** — drawer + bottom nav patterns working
