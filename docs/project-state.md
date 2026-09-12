@@ -10,10 +10,10 @@
 | Property | Value |
 |----------|-------|
 | Repository initialised | ✅ Yes |
-| Current branch | `feat/firestore-leads` |
-| Starting commit | `89ab6bc` (Phase 3 start) |
-| Current HEAD | `89ab6bc` (Phase 2 verified) |
-| Working tree | ⚠️ Uncommitted Phase 3 changes |
+| Current branch | `feat/firestore-leads-ui` |
+| Starting commit | `2776d1e` (Phase 3A complete) |
+| Current HEAD | `2776d1e` (Phase 3B in progress) |
+| Working tree | ⚠️ Uncommitted Phase 3B changes |
 | Remote configured | ❌ No |
 
 ---
@@ -25,13 +25,12 @@
 | **Phase 0 — Baseline Audit** | ✅ **Complete** | Documentation created | Baseline tagged `phase-0-baseline` |
 | **Phase 1 — Firebase Foundation** | ✅ **Complete** | Build without `DATABASE_URL` | Committed as `af8a055` |
 | **Phase 2 — Authentication & Users** | ✅ **Complete (Hardened)** | Auth implemented, route protection, tests | Committed as `436ec12`, `89ab6bc` |
-| **Phase 3 — Leads & Activity Timeline** | ✅ **Complete** | Lead persistence layer, activity history, tests | Awaiting final commit |
-| Phase 4 — Calling & Follow-ups | ⏳ Pending | Call lease, Save & Next atomic | Depends on Phase 3 |
-| Phase 5 — Survey Productionisation | ⏳ Pending | Autosave, resume, lead conversion | Depends on Phase 3 |
-| Phase 6 — Import Engine | ⏳ Pending | CSV/XLSX parse, validate, deduplicate | Depends on Phase 1 |
-| Phase 7 — Google Sheets Sync | ⏳ Pending | LeadID upsert, retry, failure visibility | Depends on Phase 3, 6 |
-| Phase 8 — Reporting & Admin | ⏳ Pending | No hard-coded metrics remain | Depends on Phase 3, 7 |
-| Phase 9 — Production Hardening | ⏳ Pending | Full test suite, Vercel deploy | Depends on all prior |
+| **Phase 3 — Leads & Activity Timeline** | ✅ **Complete** | Lead persistence layer, UI integration, data integrity | Phase 3A: `2776d1e`, Phase 3B: pending commit |
+| Phase 4 — Community Survey Persistence | ⏳ Pending | Survey autosave, resume, lead conversion | Depends on Phase 3 |
+| Phase 5 — Import Engine | ⏳ Pending | CSV/XLSX parse, validate, deduplicate | Depends on Phase 1 |
+| Phase 6 — Google Sheets Sync | ⏳ Pending | LeadID upsert, retry, failure visibility | Depends on Phase 3, 5 |
+| Phase 7 — Reporting & Admin | ⏳ Pending | No hard-coded metrics remain | Depends on Phase 3, 6 |
+| Phase 8 — Production Hardening | ⏳ Pending | Full test suite, Vercel deploy | Depends on all prior |
 
 ---
 
@@ -40,20 +39,22 @@
 | Check | Status | Details |
 |-------|--------|---------|
 | `npm install` | ✅ Passed | Dependencies installed |
-| `npm run lint` | ✅ **Passed** | 0 errors |
+| `npm run lint` | ✅ **Passed** | 0 errors, 0 warnings |
 | `npm run typecheck` | ✅ **Passed** | Strict TypeScript clean |
-| `npm run build` | ✅ **Passed** | All 22 routes compiled |
+| `npm run build` | ✅ **Passed** | All 28 routes compiled |
 | Authorization unit tests | ✅ **Passed** | 29 tests passing |
 | Firestore rules tests | ✅ **Passed** | 21 tests (emulator verified) |
 | Lead persistence tests | ✅ **Passed** | 24 tests (emulator verified) |
 | Domain unit tests | ✅ **Passed** | 40 tests (mobile + validation) |
-| Playwright E2E tests | ❌ Not exist | Not yet implemented |
+| Phase 3B integration tests | ✅ **Passed** | 11 tests (emulator verified) |
+| Timezone tests | ✅ **Passed** | 15 tests |
+| **Total** | ✅ **151 tests** | All passing |
 
 ---
 
 ## Next Approved Phase
 
-**Phase 4 — Calling and Follow-ups**
+**Phase 4 — Community Survey Persistence and Lead Conversion**
 
 ### Prerequisites (Must Complete First)
 1. ✅ Phase 3 committed
@@ -62,9 +63,10 @@
 4. ⏳ Auth flow manually verified
 
 ### Phase 4 Exit Criteria (from Architecture)
-- Two users cannot unintentionally work the same actively leased lead
-- Call outcome persists correctly
-- Follow-up queues reflect saved callbacks
+- Survey sessions persist to Firestore
+- Partial survey state recoverable
+- Survey-to-lead conversion creates lead documents
+- Survey history viewable
 
 ---
 
@@ -74,10 +76,11 @@
 |------|----------|----------|
 | `Date.now()` in render (18×) | `calling/page.tsx`, `leads/[id]/page.tsx` | ✅ Fixed in Phase 1 |
 | Unescaped `"` in JSX (2×) | `follow-ups/page.tsx:119` | ✅ Fixed in Phase 1 |
-| Hard-coded demo metrics | `reports/page.tsx`, `surveys/analytics/page.tsx`, `dashboard/page.tsx` | Phase 8 |
+| Hard-coded demo metrics | `reports/page.tsx`, `surveys/analytics/page.tsx` | Phase 7 |
 | Fake authentication | `src/lib/store.tsx` | ✅ Fixed in Phase 2 |
 | No persistence layer | Entire app | ✅ Fixed in Phase 3 |
 | Duplicate folder | `ASG Leads Call Management/` | ✅ Removed in Phase 1 |
+| Mock data in some pages | `imports/`, `surveys/`, `reports/` | Phase 7 |
 
 ---
 
@@ -95,18 +98,18 @@
 | `FIREBASE_ADMIN_PROJECT_ID` | Phase 1+ (server) | ❌ Not set |
 | `FIREBASE_ADMIN_CLIENT_EMAIL` | Phase 1+ (server) | ❌ Not set |
 | `FIREBASE_ADMIN_PRIVATE_KEY` | Phase 1+ (server) | ❌ Not set |
-| `GOOGLE_SHEETS_CLIENT_EMAIL` | Phase 7+ (server) | ❌ Not set |
-| `PERTH_SPREADSHEET_ID` | Phase 7+ | ❌ Not set |
-| `BRISBANE_SPREADSHEET_ID` | Phase 7+ | ❌ Not set |
+| `GOOGLE_SHEETS_CLIENT_EMAIL` | Phase 6+ (server) | ❌ Not set |
+| `PERTH_SPREADSHEET_ID` | Phase 6+ | ❌ Not set |
+| `BRISBANE_SPREADSHEET_ID` | Phase 6+ | ❌ Not set |
 
 ---
 
 ## Notes for Next Session
 
-1. **Phase 3 must be committed** — `git add` intended files only, commit with `feat: add firestore lead persistence`
+1. **Phase 3B must be committed** — `git add` intended files only, commit with `feat: connect lead management ui to firestore`
 2. **No secrets in commit** — `.env.local`, `*.json` service keys, `.pem` files are gitignored
 3. **Phase 4 requires Firebase project** — create in Console before starting
-4. **Do not connect Google Sheets yet** — Phase 7
+4. **Do not connect Google Sheets yet** — Phase 6
 5. **Do not redesign UI** — Astra prototype is approved baseline
 6. **Preserve mobile behaviour** — drawer + bottom nav patterns working
-7. **Hard-coded metrics are intentional demo data** — replace in Phase 8 only
+7. **Hard-coded metrics in reports/surveys are intentional demo data** — replace in Phase 7

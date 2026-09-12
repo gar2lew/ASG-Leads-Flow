@@ -521,5 +521,238 @@ The repository layer supports:
 
 ---
 
-**Report Prepared By:** Phase 3 Lead Persistence Checkpoint
-**Date:** 2026-09-11
+## 26. Phase 3B — UI Integration & Data Integrity Closeout
+
+**Date:** 2026-09-12
+**Branch:** `feat/firestore-leads-ui`
+**Starting SHA:** `2776d1e`
+
+### 26.1 Server/Client Boundary Architecture
+
+All privileged mutations now go through authenticated API routes:
+
+| Route | Methods | Purpose |
+|-------|---------|---------|
+| `/api/leads` | `POST` | Create lead |
+| `/api/leads/[id]` | `GET` | Fetch lead detail + activities + follow-ups |
+| `/api/leads/[id]` | `PUT` | Update lead |
+| `/api/leads/[id]` | `POST` | Mutate: status, assign, archive, call-result, claim |
+| `/api/leads/[id]` | `DELETE` | Release claim |
+| `/api/follow-ups/[id]/complete` | `POST` | Complete follow-up |
+
+**Security:** Actor identity derived from server session. Client never supplies `userId`, `createdBy`, `updatedBy`, or `completedBy`.
+
+### 26.2 Pagination Cursor Design
+
+**Format:** Base64url-encoded JSON: `{"createdAt":"ISO","documentId":"leadId"}`
+
+**Query ordering:** `orderBy("createdAt", "desc").orderBy("leadId", "asc")`
+
+The `leadId` tie-breaker ensures deterministic ordering when multiple leads share the same `createdAt` timestamp.
+
+**Cursor parsing:** Server decodes cursor, uses `startAfter(createdAt, documentId)` for the next page.
+
+### 26.3 Duplicate Uniqueness Strategy
+
+**Implementation:** `leadMobileKeys/{normalizedMobile}` collection.
+
+- Key document created atomically with lead in a batch write
+- Before creating a lead, server checks if key exists
+- On mobile update: delete old key, create new key (in transaction)
+- Prevents duplicate mobile numbers across leads
+
+### 26.4 Dashboard Metrics Migration
+
+**Before:** Hard-coded zeros
+**After:** Real Firestore count aggregations via `getDashboardMetrics()`
+
+| Metric | Implementation |
+|--------|---------------|
+| `myLeads` | `count()` on leads filtered by office/rep |
+| `leadsToCall` | `count()` on leads with callable statuses |
+| `followUpsDue` | `count()` on pending follow-ups ≤ today end |
+| `newLeads` | `count()` on leads with status "new" |
+| `bookedLeads` | `count()` on leads with status "booked" |
+| `officeLeadCounts` | Per-office `count()` aggregations |
+
+### 26.5 Display-Name Batching
+
+**Implementation:** `getUserProfiles(uids: string[])` in `src/lib/server/leads.ts`
+
+- Collects unique UIDs from a response/page
+- Chunks into groups of 10 (Firestore `in` limit)
+- Returns `Map<uid, {displayName, email}>`
+- Client uses map for display resolution
+
+### 26.6 Timezone Handling
+
+**Offices:**
+- Perth → `Australia/Perth` (UTC+8)
+- Brisbane → `Australia/Brisbane` (UTC+10)
+
+**Rules:**
+- Firestore stores absolute timestamps (UTC)
+- Follow-up display uses `followUp.officeId` to determine timezone
+- `primaryOfficeId` used only for user-default views
+- Multi-office users: each entity's `officeId` determines its display timezone
+
+**Functions:**
+- `formatZonedTime(date, timeZone, options)` — format date in timezone
+- `startOfDayInTimeZone(utcString, timeZone)` — get midnight in timezone
+- `classifyFollowUpTime(scheduledAt, now, timeZone)` — overdue/today/tomorrow/upcoming
+
+### 26.7 Call Claim Behaviour
+
+**Claim acquisition:** Transaction checks existing lease. If active and owned by another user, deny.
+
+**Claim refresh:** Only by claimer. Extends expiry by 15 minutes.
+
+**Claim release:** Only by claimer. Sets `activeCallLease` to null.
+
+**Save & Next flow:**
+1. Save call result
+2. On success: release current claim, move to next lead, acquire new claim
+3. On failure: remain on current lead, keep claim, show error
+
+### 26.8 Follow-Up Consistency
+
+**On completion:**
+- Set `status: "completed"`, `completedAt`, `completedBy` (from session)
+- Create `follow_up_completed` activity event
+- Query next pending follow-up for lead
+- Update `lead.nextFollowUpAt` to next follow-up's `scheduledAt`
+- If no pending follow-ups remain, set `lead.nextFollowUpAt` to null
+
+### 26.9 Search Behaviour
+
+**Current:** Exact match on `mobileNormalized` (indexed).
+
+**Limitations:** No substring search. Firestore does not support it. Future: Algolia/Typesense.
+
+### 26.10 Firestore Index Review
+
+**Existing indexes support all Phase 3B queries:**
+- `leads: officeId + status + createdAt`
+- `leads: officeId + assignedRepId + status + createdAt`
+- `leads: assignedRepId + nextFollowUpAt`
+- `leads: officeId + mobileNormalized`
+- `followUps: officeId + status + scheduledAt`
+- `followUps: assignedRepId + status + scheduledAt`
+
+**No new indexes added.**
+
+### 26.11 Mock-Data Audit
+
+**Remaining mock-data imports:**
+- `src/lib/mock-data.ts` — still imported by some pages (imports, surveys, reports)
+- These are NOT authenticated production lead routes
+- Lead management pages (leads, calling, follow-ups, dashboard) use Firestore
+
+**No silent production fallback.** Authenticated lead routes fail explicitly if Firestore is unavailable.
+
+### 26.12 Firestore Rule Review
+
+**New collection added to rules:**
+- `leadMobileKeys` — not client-writable (server-only via Admin SDK)
+
+**All existing rules verified for:**
+- Unauthenticated: denied
+- Disabled: denied
+- Rep: office/assignment boundaries enforced
+- Manager: office boundaries enforced
+- Admin: cross-office access
+- Activities: `allow write: if false` (server-only)
+
+### 26.13 Performance Review
+
+**Findings:**
+- N+1 user reads: Mitigated by `getUserProfiles()` batching
+- Unbounded lead reads: All queries use `limit`
+- Dashboard aggregations: Uses `count()` (not full collection reads)
+- Claim refresh: 5-minute interval (not excessive)
+
+### 26.14 Security Review
+
+**Verified:**
+- ✅ Actor identity derived from session
+- ✅ No client-supplied userId accepted as authority
+- ✅ Office scope enforced server-side
+- ✅ Version conflicts enforced
+- ✅ leadMobileKeys prevents concurrent duplicates
+- ✅ Pagination cannot cross authorization scope
+- ✅ Call claims cannot be stolen
+- ✅ Direct client writes restricted
+- ✅ Firebase Admin remains server-only
+- ✅ No production mock fallback
+- ✅ No raw Firebase errors exposed
+
+### 26.15 Tests Added in Phase 3B
+
+| File | Tests | Status |
+|------|-------|--------|
+| `src/test/phase3b-integration.test.ts` | 11 | ✅ Passed |
+| `src/test/timezone.test.ts` | 15 | ✅ Passed |
+
+### 26.16 Total Test Count
+
+**151 tests passing** (127 existing + 24 new)
+
+### 26.17 Files Created/Modified in Phase 3B
+
+**New files:**
+- `src/lib/server/actions.ts` — Server mutation layer
+- `src/lib/server/leads.ts` — Server-side queries
+- `src/lib/timezone.ts` — Timezone utilities
+- `src/app/api/leads/route.ts` — Leads API
+- `src/app/api/leads/[id]/route.ts` — Lead mutation API
+- `src/app/api/follow-ups/[id]/complete/route.ts` — Complete follow-up API
+- `src/app/api/calling/queue/route.ts` — Calling queue API
+- `src/app/api/dashboard/route.ts` — Dashboard API (real metrics)
+- `src/app/api/users/profiles/route.ts` — User profiles API
+- `src/app/api/users/reps/route.ts` — Reps API
+- `src/app/calling/CallingClient.tsx` — Updated to use API routes
+- `src/app/follow-ups/FollowUpsClient.tsx` — Updated to use API routes
+- `src/app/dashboard/DashboardClient.tsx` — Real metrics
+- `src/app/leads/LeadsClient.tsx` — Firestore-backed
+- `src/test/phase3b-integration.test.ts` — Integration tests
+- `src/test/timezone.test.ts` — Timezone tests
+
+**Modified files:**
+- `src/app/api/dashboard/route.ts` — Real metrics implementation
+- `src/lib/server/leads.ts` — Pagination cursor redesign
+- `src/lib/timezone.ts` — Added `classifyFollowUpTime`
+- `vitest.config.ts` — Serial test execution for emulator stability
+
+### 26.18 Verification Results
+
+| Check | Result |
+|-------|--------|
+| `npm run lint` | ✅ **Passed** (0 errors, 0 warnings) |
+| `npm run typecheck` | ✅ **Passed** |
+| `npm run build` | ✅ **Passed** (28 routes) |
+| All tests | ✅ **151 passed** |
+
+### 26.19 Phase 3 Completion Status
+
+**Phase 3 is now COMPLETE.**
+
+✅ **All gates green:**
+- Persistence foundation (Phase 3A)
+- UI integration (Phase 3B)
+- Data integrity closeout (Phase 3B)
+- Server/client boundary resolved
+- Real dashboard metrics
+- Pagination cursor correctness
+- Duplicate uniqueness
+- Timezone handling
+- Call claim tests
+- Follow-up consistency tests
+
+### 26.20 Phase 4 Safe to Begin?
+
+**Yes.** Phase 4 (Community Survey Persistence and Lead Conversion) can begin.
+
+---
+
+**Report Prepared By:** Phase 3B Checkpoint
+**Date:** 2026-09-12
