@@ -15,6 +15,7 @@ export const COLLECTIONS = {
   SHEET_SYNC_JOBS: "sheetSyncJobs",
   SETTINGS: "settings",
   AUDIT_EVENTS: "auditEvents",
+  LEAD_MOBILE_KEYS: "leadMobileKeys",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

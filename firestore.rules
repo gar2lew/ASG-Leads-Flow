@@ -134,8 +134,38 @@ service cloud.firestore {
     // Imports Collection
     // ============================================
     match /imports/{importId} {
-      allow read: if isActive() && (isAdmin() || isManager());
-      allow write: if isActive() && (isAdmin() || isManager());
+      allow read: if isActive() && (
+        isAdmin() ||
+        (isManager() && userBelongsToOffice(resource.data.officeId)) ||
+        (isRep() && request.auth.uid == resource.data.createdBy && userBelongsToOffice(resource.data.officeId))
+      );
+      allow write: if isActive() && (
+        isAdmin() ||
+        (isManager() && userBelongsToOffice(resource.data.officeId))
+      );
+    }
+
+    // ============================================
+    // Import Rows Subcollection
+    // ============================================
+    match /imports/{importId}/importRows/{rowId} {
+      allow read: if isActive() && (
+        isAdmin() ||
+        (isManager() && userBelongsToOffice(get(/databases/$(database)/documents/imports/$(importId)).data.officeId)) ||
+        (isRep() && request.auth.uid == get(/databases/$(database)/documents/imports/$(importId)).data.createdBy)
+      );
+      allow write: if isActive() && (
+        isAdmin() ||
+        (isManager() && userBelongsToOffice(get(/databases/$(database)/documents/imports/$(importId)).data.officeId))
+      );
+    }
+
+    // ============================================
+    // Lead Mobile Keys Collection
+    // ============================================
+    match /leadMobileKeys/{keyId} {
+      allow read: if isActive();
+      allow write: if false; // Server-only via Admin SDK
     }
     
     // ============================================
