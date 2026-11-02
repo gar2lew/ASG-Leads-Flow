@@ -6,7 +6,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/status-badge";
@@ -304,34 +304,10 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
           )}
         </div>
 
-        {/* Mobile Cards */}
+        {/* Mobile Cards — swipe left to reveal Call / View */}
         <div className="space-y-3 lg:hidden">
           {leads.map((lead) => (
-            <Link
-              key={lead.leadId}
-              href={`/leads/${lead.leadId}`}
-              className="block rounded-xl border border-asg-border bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-medium text-asg-text">{lead.name}</p>
-                  <p className="text-xs text-asg-text-muted">{lead.leadId}</p>
-                </div>
-                <StatusBadge status={lead.status as LeadStatus} />
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-asg-text-secondary">
-                <div className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" />
-                  {lead.mobile}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5" />
-                  {lead.assignedRepName ?? "—"}
-                </div>
-                <div>{lead.suburb}</div>
-                <div>{lead.source}</div>
-              </div>
-            </Link>
+            <SwipeableLeadCard key={lead.leadId} lead={lead} />
           ))}
           {leads.length === 0 && (
             <EmptyState
@@ -352,6 +328,96 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Swipeable mobile lead card: swipe left reveals Call / View actions (touch-first, no drag-drop needed)
+function SwipeableLeadCard({ lead }: { lead: Lead }) {
+  const [offset, setOffset] = useState(0);
+  const [open, setOpen] = useState(false);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const lockedAxis = useRef<"none" | "x" | "y">("none");
+  const [isDraggingX, setIsDraggingX] = useState(false);
+
+  const MAX = 168; // px reveal width
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    lockedAxis.current = "none";
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - startX.current;
+    const dy = e.touches[0].clientY - startY.current;
+    if (lockedAxis.current === "none") {
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        lockedAxis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+    }
+    if (lockedAxis.current !== "x") return;
+    setIsDraggingX(true);
+    const base = open ? -MAX : 0;
+    setOffset(Math.min(0, Math.max(-MAX, base + dx)));
+  };
+
+  const onTouchEnd = () => {
+    setIsDraggingX(false);
+    const revealed = offset < -MAX / 2;
+    setOpen(revealed);
+    setOffset(revealed ? -MAX : 0);
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl lg:hidden">
+      {/* Revealed actions behind the card */}
+      <div className="absolute inset-y-0 right-0 flex items-stretch gap-1 p-1">
+        <a
+          href={`tel:${lead.mobile.replace(/\s/g, "")}`}
+          className="flex w-20 flex-col items-center justify-center gap-1 rounded-lg bg-asg-gold text-[11px] font-semibold text-asg-navy"
+        >
+          <Phone className="h-5 w-5" />
+          Call
+        </a>
+        <Link
+          href={`/leads/${lead.leadId}`}
+          className="flex w-20 flex-col items-center justify-center gap-1 rounded-lg bg-asg-navy text-[11px] font-semibold text-white"
+        >
+          <User className="h-5 w-5" />
+          View
+        </Link>
+      </div>
+      <div
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ transform: `translateX(${offset}px)`, transition: isDraggingX ? "none" : "transform 200ms ease" }}
+        className="relative touch-pan-y rounded-xl border border-asg-border bg-white p-4 shadow-sm"
+      >
+        <Link href={`/leads/${lead.leadId}`} className="block">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="font-medium text-asg-text">{lead.name}</p>
+              <p className="text-xs text-asg-text-muted">{lead.leadId}</p>
+            </div>
+            <StatusBadge status={lead.status as LeadStatus} />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-asg-text-secondary">
+            <div className="flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5" />
+              {lead.mobile}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" />
+              {lead.assignedRepName ?? "—"}
+            </div>
+            <div>{lead.suburb}</div>
+            <div>{lead.source}</div>
+          </div>
+        </Link>
       </div>
     </div>
   );

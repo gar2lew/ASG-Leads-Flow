@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./sidebar";
 import { MobileNav } from "./mobile-nav";
+import { OverdueBanner } from "./overdue-banner";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -37,7 +38,10 @@ export function Shell({ children }: { children: ReactNode }) {
       <Sidebar />
       <MobileNav />
       <main className="min-h-screen pt-14 lg:pl-64 lg:pt-0">
-        <div className="mx-auto max-w-7xl p-4 pb-24 lg:p-8">{children}</div>
+        <div className="mx-auto max-w-7xl p-4 pb-24 lg:p-8">
+          <OverdueBanner />
+          {children}
+        </div>
       </main>
     </div>
   );

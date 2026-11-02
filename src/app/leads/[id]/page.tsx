@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useApp } from "@/lib/store";
 import { StatusBadge } from "@/components/status-badge";
-import { Phone, Calendar, MessageSquare, RotateCcw, Bookmark, MapPin, Building2, User, ArrowLeft, Clock } from "lucide-react";
+import { Phone, Calendar, MessageSquare, RotateCcw, Bookmark, MapPin, Building2, User, ArrowLeft, Clock, X } from "lucide-react";
 import { LeadStatus, CallResult } from "@/lib/types";
 import { cn, generateId } from "@/lib/utils";
 
@@ -15,7 +15,9 @@ const callResults: CallResult[] = ["No Answer", "Contacted", "Interested", "Call
 export default function LeadDetailPage() {
   const params = useParams();
   const { leads, getLeadActivities, currentUser, updateLead, addActivity, addFollowUp } = useApp();
-  const lead = leads.find((l) => l.id === params.id);
+  const raw = params.id;
+  const id = typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : "";
+  const lead = leads.find((l) => l.leadId === id || l.id === id);
 
   const [activeTab, setActiveTab] = useState<"overview" | "activity">("overview");
   const [showCallModal, setShowCallModal] = useState(false);
@@ -26,6 +28,7 @@ export default function LeadDetailPage() {
   const [note, setNote] = useState("");
   const [callResult, setCallResult] = useState<CallResult | "">("");
   const [followUpDate, setFollowUpDate] = useState("");
+  const [followUpPrompt, setFollowUpPrompt] = useState<string | null>(null);
   const [followUpTime, setFollowUpTime] = useState("");
   const [newStatus, setNewStatus] = useState<LeadStatus | "">("");
 
@@ -72,6 +75,21 @@ export default function LeadDetailPage() {
     });
     setCallResult("");
     setShowCallModal(false);
+
+    // Guided next step: results that always need a scheduled follow-up
+    if (callResult === "Callback" || callResult === "No Answer") {
+      const suggested = new Date();
+      suggested.setDate(suggested.getDate() + (callResult === "No Answer" ? 1 : 2));
+      suggested.setHours(9, 0, 0, 0);
+      setFollowUpDate(suggested.toISOString().slice(0, 10));
+      setFollowUpTime("09:00");
+      setFollowUpPrompt(
+        callResult === "Callback"
+          ? "They asked to be called back — schedule that callback before you move on."
+          : "No answer — schedule a retry for tomorrow."
+      );
+      setShowFollowUpModal(true);
+    }
   };
 
   const handleSaveNote = () => {
@@ -119,6 +137,7 @@ export default function LeadDetailPage() {
     });
     setFollowUpDate("");
     setFollowUpTime("");
+    setFollowUpPrompt(null);
     setShowFollowUpModal(false);
   };
 
@@ -140,7 +159,26 @@ export default function LeadDetailPage() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in pb-24 sm:pb-0">
+      {/* Mobile: thumb-reachable pinned action bar (above the bottom tab bar) */}
+      <div className="fixed bottom-16 left-0 right-0 z-30 grid grid-cols-4 gap-1 border-t border-asg-border bg-white px-2 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] sm:hidden">
+        <a
+          href={`tel:${lead.mobile.replace(/\s/g, "")}`}
+          className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg bg-asg-gold text-xs font-semibold text-asg-navy"
+        >
+          <Phone className="h-4 w-4" /> Call
+        </a>
+        <button onClick={() => setShowNoteModal(true)} className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg border border-asg-border text-xs font-medium text-asg-text">
+          <MessageSquare className="h-4 w-4 text-asg-gold-dark" /> Note
+        </button>
+        <button onClick={() => { setFollowUpPrompt(null); setShowFollowUpModal(true); }} className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg border border-asg-border text-xs font-medium text-asg-text">
+          <Calendar className="h-4 w-4 text-asg-gold-dark" /> Follow up
+        </button>
+        <button onClick={() => setShowStatusModal(true)} className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg border border-asg-border text-xs font-medium text-asg-text">
+          <RotateCcw className="h-4 w-4 text-asg-gold-dark" /> Status
+        </button>
+      </div>
+
       <Link href="/leads" className="inline-flex items-center gap-1 text-sm font-medium text-asg-text-secondary hover:text-asg-gold-dark">
         <ArrowLeft className="h-4 w-4" /> Back to Leads
       </Link>
@@ -336,13 +374,13 @@ export default function LeadDetailPage() {
 
       {showCallModal && (
         <Modal title="Log Call Result" onClose={() => setShowCallModal(false)}>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {callResults.map((r) => (
               <button
                 key={r}
                 onClick={() => setCallResult(r)}
                 className={cn(
-                  "rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors",
+                  "min-h-[44px] rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
                   callResult === r ? "border-asg-gold bg-asg-gold-subtle text-asg-gold-dark" : "border-asg-border bg-white text-asg-text hover:border-asg-gold"
                 )}
               >
@@ -359,7 +397,18 @@ export default function LeadDetailPage() {
 
       {showNoteModal && (
         <Modal title="Add Note" onClose={() => setShowNoteModal(false)}>
-          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4} className="asg-textarea" placeholder="Enter your note..." />
+          <div className="flex flex-wrap gap-2">
+            {["Left voicemail", "Called, no answer", "Booked a call back", "Interested, call after 5pm", "Asked to call next week"].map((chip) => (
+              <button
+                key={chip}
+                onClick={() => setNote((n) => (n ? `${n}${n.endsWith(" ") ? "" : " "}${chip}` : chip))}
+                className="rounded-full border border-asg-border bg-asg-cream px-3 py-1.5 text-xs font-medium text-asg-text hover:border-asg-gold"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4} className="asg-textarea mt-2" placeholder="Enter your note... (or tap a chip above)" />
           <div className="mt-4 flex justify-end gap-2">
             <button onClick={() => setShowNoteModal(false)} className="asg-button-secondary">Cancel</button>
             <button onClick={handleSaveNote} disabled={!note.trim()} className="asg-button-primary">Save Note</button>
@@ -368,7 +417,10 @@ export default function LeadDetailPage() {
       )}
 
       {showFollowUpModal && (
-        <Modal title="Schedule Follow Up" onClose={() => setShowFollowUpModal(false)}>
+        <Modal title="Schedule Follow Up" onClose={() => { setFollowUpPrompt(null); setShowFollowUpModal(false); }}>
+          {followUpPrompt && (
+            <p className="mb-3 rounded-lg bg-asg-gold-subtle px-3 py-2 text-sm font-medium text-asg-gold-dark">{followUpPrompt}</p>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-asg-text">Date</label>
@@ -413,12 +465,23 @@ export default function LeadDetailPage() {
 }
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  // Bottom sheets on phones (thumb-reachable, matches native feel), centered dialogs elsewhere
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-xl border border-asg-border bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-asg-text">{title}</h3>
-        <div className="mt-4">{children}</div>
+      <div className="relative max-h-[85vh] w-full overflow-y-auto rounded-t-2xl border border-asg-border bg-white p-6 pb-8 shadow-xl sm:max-w-md sm:rounded-xl sm:pb-6">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-asg-border sm:hidden" />
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-asg-text">{title}</h3>
+          <button
+            onClick={onClose}
+            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-asg-text-muted hover:bg-asg-cream"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="mt-2">{children}</div>
       </div>
     </div>
   );
