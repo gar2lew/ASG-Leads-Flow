@@ -22,25 +22,40 @@ let app: App | undefined;
 let adminAuth: Auth | undefined;
 let adminDb: Firestore | undefined;
 
+const useEmulator = process.env.FIREBASE_USE_EMULATOR === "true";
+
 function getAdminApp(): App {
   if (!app) {
-    const { isValid, missing } = validateAdminConfig();
-    if (!isValid) {
-      throw new Error(
-        `[firebase-admin] Missing required environment variables: ${missing.join(", ")}`
-      );
-    }
-
-    if (getApps().length > 0) {
-      app = getApps()[0];
+    if (useEmulator) {
+      // Emulator mode: no service-account credential required. The Admin SDK
+      // routes Auth traffic to FIREBASE_AUTH_EMULATOR_HOST and Firestore
+      // traffic to FIRESTORE_EMULATOR_HOST (set in .env.local).
+      if (getApps().length > 0) {
+        app = getApps()[0];
+      } else {
+        app = initializeApp({
+          projectId: process.env.FIREBASE_ADMIN_PROJECT_ID ?? "asg-leads-dev",
+        });
+      }
     } else {
-      app = initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-          privateKey: normalizePrivateKey(process.env.FIREBASE_ADMIN_PRIVATE_KEY),
-        }),
-      });
+      const { isValid, missing } = validateAdminConfig();
+      if (!isValid) {
+        throw new Error(
+          `[firebase-admin] Missing required environment variables: ${missing.join(", ")}`
+        );
+      }
+
+      if (getApps().length > 0) {
+        app = getApps()[0];
+      } else {
+        app = initializeApp({
+          credential: cert({
+            projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+            privateKey: normalizePrivateKey(process.env.FIREBASE_ADMIN_PRIVATE_KEY),
+          }),
+        });
+      }
     }
   }
   return app;
@@ -61,6 +76,7 @@ export function getAdminFirestore(): Firestore {
 }
 
 export const isAdminConfigured = (): boolean => {
+  if (useEmulator) return true;
   const { isValid } = validateAdminConfig();
   return isValid;
 };

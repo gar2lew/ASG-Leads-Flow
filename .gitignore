@@ -54,3 +54,11 @@ ASG Leads Call Management/
 # Misc
 *.log
 .vercel
+
+# Local tooling / dev artifacts
+.freebuff/
+.cloud-attachments/
+.emulator-data/
+emulator.log
+dev.log
+*.png

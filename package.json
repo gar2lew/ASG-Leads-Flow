@@ -3,6 +3,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "emulators": "firebase emulators:start --only auth,firestore",
+    "seed": "tsx --import ./scripts/shims/server-only-neutralize.mjs scripts/seed-dev-users.ts",
+    "set-admin": "tsx --import ./scripts/shims/server-only-neutralize.mjs scripts/set-admin.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -10,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rules": "vitest run src/test/firestore-rules.test.ts",
-    "test:permissions": "vitest run src/test/permissions.test.ts"
+    "test:permissions": "vitest run src/test/permissions.test.ts",
+    "seed:leads": "tsx --import ./scripts/shims/server-only-neutralize.mjs scripts/seed-demo-leads.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -41,6 +45,7 @@
     "eslint-config-next": "16.2.6",
     "postcss": "8.5.8",
     "tailwindcss": "4.1.17",
+    "tsx": "^4.23.15",
     "typescript": "5.9.3",
     "vitest": "^2.1.0"
   }

@@ -1,8 +1,8 @@
 "use client";
 
 import { FirebaseApp, getApps, initializeApp } from "firebase/app";
-import { Auth, getAuth } from "firebase/auth";
-import { Firestore, getFirestore } from "firebase/firestore";
+import { Auth, connectAuthEmulator, getAuth } from "firebase/auth";
+import { Firestore, connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
@@ -50,9 +50,17 @@ function getApp(): FirebaseApp {
   return app;
 }
 
+const useEmulator =
+  process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true" &&
+  typeof window !== "undefined";
+
 export function getFirebaseAuth(): Auth {
   if (!auth) {
     auth = getAuth(getApp());
+    if (useEmulator) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true } as any);
+    }
   }
   return auth;
 }
@@ -60,6 +68,13 @@ export function getFirebaseAuth(): Auth {
 export function getFirestoreDb(): Firestore {
   if (!db) {
     db = getFirestore(getApp());
+    if (useEmulator) {
+      connectFirestoreEmulator(
+        db,
+        "localhost",
+        Number(process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_PORT) || 8080
+      );
+    }
   }
   return db;
 }
