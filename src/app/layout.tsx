@@ -1,8 +1,16 @@
+import { Inter } from "next/font/google";
+ 
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { AppProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/auth";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "ASG Leads — Amplify Solutions Group",
@@ -25,7 +33,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-asg-cream text-asg-text antialiased">
+      <body className={`${inter.variable} font-sans bg-asg-cream text-asg-text antialiased`}>
         <AuthProvider>
           <AppProvider>
             {children}

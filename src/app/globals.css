@@ -24,7 +24,7 @@
   --color-asg-info: #2C5F7C;
   --color-asg-info-subtle: #EAF2F6;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-inter, "Inter"), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 :root {

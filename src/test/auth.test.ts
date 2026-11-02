@@ -28,7 +28,7 @@ const testDb = getFirestore(testApp);
 
 // Connect to emulators
 connectAuthEmulator(testAuth, "http://localhost:9099");
-connectFirestoreEmulator(testDb, "localhost", 8080);
+connectFirestoreEmulator(testDb, "localhost", Number(process.env.FIRESTORE_EMULATOR_PORT) || 8080);
 
 describe("Authentication", () => {
   beforeEach(async () => {

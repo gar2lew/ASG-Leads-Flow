@@ -29,15 +29,18 @@ interface DashboardData {
     source: string;
     status: string;
     assignedRepId: string | null;
+    assignedRepName?: string | null;
     createdAt: string;
   }>;
   upcomingCallbacks: Array<{
     followUpId: string;
     leadId: string;
     officeId: string;
-    assignedRepId: string;
     scheduledAt: string;
     status: string;
+    leadName?: string | null;
+    assignedRepId?: string | null;
+    assignedRepName?: string | null;
     reason?: string | null;
     lastCallResult?: string | null;
     lastNote?: string | null;
@@ -191,16 +194,19 @@ export default function DashboardClient() {
                   <p className="px-5 py-8 text-center text-sm text-asg-text-secondary">No callbacks scheduled.</p>
                 ) : (
                   upcomingCallbacks.map((fu) => (
-                    <div key={fu.followUpId} className="px-5 py-4">
-                      <p className="font-medium text-asg-text">{fu.leadId}</p>
-                      <p className="text-sm text-asg-text-secondary">
-                        {new Date(fu.scheduledAt).toLocaleString("en-AU", {
-                          day: "numeric",
-                          month: "short",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </p>
+                    <div key={fu.followUpId} className="flex items-center justify-between px-5 py-4">
+                      <div>
+                        <p className="font-medium text-asg-text">{fu.leadName ?? fu.leadId}</p>
+                        <p className="text-sm text-asg-text-secondary">
+                          {new Date(fu.scheduledAt).toLocaleString("en-AU", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <Phone className="h-4 w-4 text-asg-gold-dark" />
                     </div>
                   ))
                 )}
@@ -236,7 +242,7 @@ export default function DashboardClient() {
                       <div>
                         <p className="font-medium text-asg-text">{lead.name}</p>
                         <p className="text-sm text-asg-text-secondary">
-                          {lead.source} · {lead.assignedRepId ?? "—"}
+                          {lead.assignedRepName ?? lead.assignedRepId ?? "—"}
                         </p>
                       </div>
                       <StatusBadge status={lead.status} />
@@ -256,8 +262,8 @@ export default function DashboardClient() {
                 ) : (
                   upcomingCallbacks.map((fu) => (
                     <div key={fu.followUpId} className="px-5 py-4">
-                      <p className="font-medium text-asg-text">{fu.leadId}</p>
-                      <p className="text-sm text-asg-text-secondary">{fu.assignedRepId ?? "—"}</p>
+                      <p className="font-medium text-asg-text">{fu.leadName ?? fu.leadId}</p>
+                      <p className="text-sm text-asg-text-secondary">{fu.assignedRepName ?? fu.assignedRepId ?? "—"}</p>
                       <p className="text-sm text-xs text-asg-text-muted">
                         {new Date(fu.scheduledAt).toLocaleString("en-AU", {
                           day: "numeric",
