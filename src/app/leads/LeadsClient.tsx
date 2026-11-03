@@ -11,6 +11,8 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/status-badge";
 import { KanbanBoard } from "@/components/kanban-board";
+import { OfflineSyncBar } from "@/components/offline-sync-bar";
+import * as offlineQueue from "@/lib/offline-queue";
 import { EmptyState } from "@/components/empty-state";
 import { LeadStatus, LeadSource } from "@/lib/types";
 import { Search, Phone, Calendar, Plus, MoreHorizontal, User, Loader2, AlertCircle, RefreshCw, LayoutList, Columns3 } from "lucide-react";
@@ -77,8 +79,14 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [view, setView] = useState<"list" | "board">("list");
 
-  // Kanban status change: POST to the status action, optimistic update on success
+  // Kanban status change: POST to the status action, optimistic update on success.
+  // Offline/network failures are queued locally and retry automatically on reconnect.
   const handleKanbanStatusChange = useCallback(async (leadId: string, newStatus: LeadStatus, expectedVersion: number): Promise<string | null> => {
+    if (!navigator.onLine) {
+      offlineQueue.enqueueLeadStatus(leadId, newStatus.toLowerCase().replace(/ /g, "_"));
+      setLeads((prev) => prev.map((l) => (l.leadId === leadId ? { ...l, status: newStatus, version: expectedVersion + 1 } : l)));
+      return null;
+    }
     try {
       const response = await fetch(`/api/leads/${leadId}`, {
         method: "POST",
@@ -86,12 +94,14 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
         body: JSON.stringify({ action: "status", status: newStatus.toLowerCase().replace(/ /g, "_"), expectedVersion }),
       });
       const data = await response.json().catch(() => ({}));
-      if (response.status === 409) return "This lead was just updated elsewhere — tap refresh and try again.";
+      if (response.status === 409) return "This lead was just updated elsewhere — refresh and try again.";
       if (!response.ok) return (data as any).error?.message || "Failed to update lead status.";
       setLeads((prev) => prev.map((l) => (l.leadId === leadId ? { ...l, status: newStatus, version: expectedVersion + 1 } : l)));
       return null;
     } catch {
-      return "Network error — check your connection and try again.";
+      offlineQueue.enqueueLeadStatus(leadId, newStatus.toLowerCase().replace(/ /g, "_"), expectedVersion);
+      setLeads((prev) => prev.map((l) => (l.leadId === leadId ? { ...l, status: newStatus, version: expectedVersion + 1 } : l)));
+      return null;
     }
   }, []);
 
@@ -335,6 +345,8 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
         </div>
 
         {/* Kanban Board (tablet drag / phone accordion) */}
+        <OfflineSyncBar />
+
         {view === "board" && (
           <KanbanBoard
             leads={leads}
