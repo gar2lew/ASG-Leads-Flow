@@ -15,7 +15,7 @@ import { OfflineSyncBar } from "@/components/offline-sync-bar";
 import * as offlineQueue from "@/lib/offline-queue";
 import { EmptyState } from "@/components/empty-state";
 import { LeadStatus, LeadSource } from "@/lib/types";
-import { Search, Phone, Calendar, Plus, MoreHorizontal, User, Loader2, AlertCircle, RefreshCw, LayoutList, Columns3 } from "lucide-react";
+import { Search, Phone, Calendar, Plus, MoreHorizontal, User, Loader2, AlertCircle, RefreshCw, LayoutList, Columns3, FilePlus2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Lead {
@@ -209,10 +209,16 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
             </button>
           </div>
           {(isManager || isAdmin) && (
-            <Link href="/leads/new" className="asg-button-primary">
-              <Plus className="h-4 w-4" />
-              Add Lead
-            </Link>
+            <>
+              <Link href="/leads/import" className="asg-button-secondary">
+                <FilePlus2 className="h-4 w-4" />
+                Survey Import
+              </Link>
+              <Link href="/leads/new" className="asg-button-primary">
+                <Plus className="h-4 w-4" />
+                Add Lead
+              </Link>
+            </>
           )}
         </div>
       </div>

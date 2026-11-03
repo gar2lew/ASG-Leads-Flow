@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
           claimedAt: data.activeCallLease.claimedAt?.toDate?.()?.toISOString() ?? data.activeCallLease.claimedAt,
           expiresAt: data.activeCallLease.expiresAt?.toDate?.()?.toISOString() ?? data.activeCallLease.expiresAt,
         } : null,
+        surveyRatings: data.survey?.ratings ?? null,
         renterOwner: data.survey?.renterOwner,
         employmentStatus: data.survey?.employmentStatus,
         superannuation: data.survey?.superannuation,

@@ -33,6 +33,7 @@ interface Lead {
     claimedAt: string;
     expiresAt: string;
   } | null;
+  surveyRatings?: { costOfLiving?: number | null; tooMuchTax?: number | null; renterOwner?: number | null; ftPt?: number | null; superannuation?: number | null } | null;
   renterOwner?: string;
   employmentStatus?: string;
   superannuation?: string;
@@ -370,6 +371,26 @@ export function CallingClient() {
             <p className="text-sm font-medium text-asg-text">Source</p>
             <p className="text-sm text-asg-text-secondary">{lead?.source}</p>
           </div>
+
+          {lead?.surveyRatings && Object.values(lead.surveyRatings).some((v) => v != null) && (
+            <div className="rounded-lg border border-asg-border bg-asg-cream/50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-asg-text-secondary">Survey Ratings</p>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                {([
+                  ["Cost of Living", lead.surveyRatings.costOfLiving],
+                  ["Too Much Tax", lead.surveyRatings.tooMuchTax],
+                  ["Renter/Owner", lead.surveyRatings.renterOwner],
+                  ["FT/PT", lead.surveyRatings.ftPt],
+                  ["Super", lead.surveyRatings.superannuation],
+                ] as [string, number | null | undefined][]).filter(([, v]) => v != null).map(([label, v]) => (
+                  <div key={label} className="rounded-mdborder border-asg-border bg-white px-2.5 py-1.5">
+                    <span className="text-xs text-asg-text-muted">{label}</span>
+                    <span className="ml-1.5 font-medium text-asg-text">{v}/10</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {(lead?.costOfLivingResponse !== undefined || lead?.taxResponse !== undefined) && (
             <div className="rounded-lg border border-asg-border bg-asg-cream/50 p-4">

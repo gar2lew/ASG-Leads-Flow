@@ -311,6 +311,41 @@ export default function LeadDetailPage() {
               </div>
             </div>
 
+            {(lead as any).survey && (
+              <div className="rounded-lg border border-asg-border bg-asg-cream/50 p-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-asg-text-secondary">Survey Answers</h2>
+                  {(lead as any).survey.importedAt && (
+                    <span className="text-xs text-asg-text-muted">{String((lead as any).survey.importedAt)}{(lead as any).survey.repName ? ` · ${(lead as any).survey.repName}` : ""}</span>
+                  )}
+                </div>
+                {(() => {
+                  const sv: any = (lead as any).survey;
+                  const items: { label: string; value: string }[] = [];
+                  const r = sv.ratings ?? {};
+                  if (r.costOfLiving != null) items.push({ label: "Cost of Living", value: `${r.costOfLiving}/10` });
+                  if (r.tooMuchTax != null) items.push({ label: "Too Much Tax", value: `${r.tooMuchTax}/10` });
+                  if (r.renterOwner != null) items.push({ label: "Renter / Owner", value: `${r.renterOwner}/10` });
+                  if (r.ftPt != null) items.push({ label: "Full Time / Part Time", value: `${r.ftPt}/10` });
+                  if (r.superannuation != null) items.push({ label: "Superannuation", value: `${r.superannuation}/10` });
+                  if (sv.notes && !items.length) items.push({ label: "Survey", value: String(sv.notes) });
+                  if (sv.renterOwner) items.push({ label: "Housing", value: String(sv.renterOwner) });
+                  if (sv.employmentStatus) items.push({ label: "Employment", value: String(sv.employmentStatus) });
+                  if (sv.superannuationValue) items.push({ label: "Super (answer)", value: String(sv.superannuationValue) });
+                  return items.length ? (
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      {items.map((it) => (
+                        <div key={it.label}>
+                          <p className="text-xs text-asg-text-muted">{it.label}</p>
+                          <p className="mt-1 text-base text-asg-text">{it.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            )}
+
             <div>
               <div className="flex gap-6 border-b border-asg-border">
                 <button
