@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/lib/store";
 import { StatusBadge } from "@/components/status-badge";
 import { Phone, Calendar, MessageSquare, RotateCcw, Bookmark, MapPin, Building2, User, ArrowLeft, Clock, X } from "lucide-react";
@@ -29,6 +29,38 @@ export default function LeadDetailPage() {
   const [callResult, setCallResult] = useState<CallResult | "">("");
   const [followUpDate, setFollowUpDate] = useState("");
   const [followUpPrompt, setFollowUpPrompt] = useState<string | null>(null);
+  const [promptedCallSession, setPromptedCallSession] = useState(false);
+  const sessionHandled = useRef(false);
+
+  // Guided call session: tapping Call records a session; when the rep returns
+  // from the dialer (app switch back or page re-mount) the result sheet pre-opens.
+  useEffect(() => {
+    const maybeOpen = () => {
+      if (sessionHandled.current) return;
+      try {
+        const rawSession = sessionStorage.getItem("asg-call-session");
+        if (!rawSession) return;
+        const session = JSON.parse(rawSession) as { leadId: string; startedAt: number };
+        if (session.leadId !== id) return;
+        if (Date.now() - session.startedAt < 10_000) return; // require an actual leave
+        sessionStorage.removeItem("asg-call-session");
+        sessionHandled.current = true;
+        setCallResult("");
+        setPromptedCallSession(true);
+        setShowCallModal(true);
+      } catch {
+        sessionStorage.removeItem("asg-call-session");
+      }
+    };
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") maybeOpen();
+    });
+    maybeOpen();
+  }, [id]);
+
+  const startCallSession = () => {
+    sessionStorage.setItem("asg-call-session", JSON.stringify({ leadId: id, startedAt: Date.now() }));
+  };
   const [followUpTime, setFollowUpTime] = useState("");
   const [newStatus, setNewStatus] = useState<LeadStatus | "">("");
 
@@ -163,6 +195,7 @@ export default function LeadDetailPage() {
       {/* Mobile: thumb-reachable pinned action bar (above the bottom tab bar) */}
       <div className="fixed bottom-16 left-0 right-0 z-30 grid grid-cols-4 gap-1 border-t border-asg-border bg-white px-2 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] sm:hidden">
         <a
+          onClick={startCallSession}
           href={`tel:${lead.mobile.replace(/\s/g, "")}`}
           className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg bg-asg-gold text-xs font-semibold text-asg-navy"
         >
@@ -193,7 +226,8 @@ export default function LeadDetailPage() {
             <p className="mt-1 text-sm text-asg-text-muted">{lead.leadId} · {lead.source}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href={`tel:${lead.mobile.replace(/\s/g, "")}`} className="asg-button-primary">
+            <a onClick={startCallSession}
+              href={`tel:${lead.mobile.replace(/\s/g, "")}`} className="asg-button-primary">
               <Phone className="h-4 w-4" />
               Call
             </a>
@@ -373,7 +407,10 @@ export default function LeadDetailPage() {
       </div>
 
       {showCallModal && (
-        <Modal title="Log Call Result" onClose={() => setShowCallModal(false)}>
+        <Modal title="Log Call Result" onClose={() => { setPromptedCallSession(false); sessionStorage.removeItem("asg-call-session"); setShowCallModal(false); }}>
+          {promptedCallSession && (
+            <p className="mb-3 rounded-lg bg-asg-gold-subtle px-3 py-2 text-sm font-medium text-asg-gold-dark">Welcome back — how did the call with {lead.name} go?</p>
+          )}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {callResults.map((r) => (
               <button
