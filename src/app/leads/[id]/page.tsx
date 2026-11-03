@@ -325,13 +325,11 @@ export default function LeadDetailPage() {
                   const r = sv.ratings ?? {};
                   if (r.costOfLiving != null) items.push({ label: "Cost of Living", value: `${r.costOfLiving}/10` });
                   if (r.tooMuchTax != null) items.push({ label: "Too Much Tax", value: `${r.tooMuchTax}/10` });
-                  if (r.renterOwner != null) items.push({ label: "Renter / Owner", value: `${r.renterOwner}/10` });
-                  if (r.ftPt != null) items.push({ label: "Full Time / Part Time", value: `${r.ftPt}/10` });
-                  if (r.superannuation != null) items.push({ label: "Superannuation", value: `${r.superannuation}/10` });
-                  if (sv.notes && !items.length) items.push({ label: "Survey", value: String(sv.notes) });
+                  if (sv.costOfLivingResponse === true || sv.costOfLivingResponse === false) items.push({ label: "Cost of Living increased", value: sv.costOfLivingResponse ? "Yes" : "No" });
+                  if (sv.taxResponse === true || sv.taxResponse === false) items.push({ label: "Too Much Tax", value: sv.taxResponse ? "Yes" : "No" });
                   if (sv.renterOwner) items.push({ label: "Housing", value: String(sv.renterOwner) });
                   if (sv.employmentStatus) items.push({ label: "Employment", value: String(sv.employmentStatus) });
-                  if (sv.superannuationValue) items.push({ label: "Super (answer)", value: String(sv.superannuationValue) });
+                  if (sv.superannuation) items.push({ label: "Superannuation", value: String(sv.superannuation) });
                   return items.length ? (
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
                       {items.map((it) => (

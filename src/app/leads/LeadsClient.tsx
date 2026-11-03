@@ -14,6 +14,7 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { OfflineSyncBar } from "@/components/offline-sync-bar";
 import * as offlineQueue from "@/lib/offline-queue";
 import { EmptyState } from "@/components/empty-state";
+import SurveyImportForm from "@/components/survey-import";
 import { LeadStatus, LeadSource } from "@/lib/types";
 import { Search, Phone, Calendar, Plus, MoreHorizontal, User, Loader2, AlertCircle, RefreshCw, LayoutList, Columns3, FilePlus2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -78,6 +79,8 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
   const [sortBy, setSortBy] = useState<"createdAt" | "nextFollowUpAt" | "name">("createdAt");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [view, setView] = useState<"list" | "board">("list");
+  const [pageTab, setPageTab] = useState<"tracking" | "import">("tracking");
+  const canImport = isManager || isAdmin;
 
   // Kanban status change: POST to the status action, optimistic update on success.
   // Offline/network failures are queued locally and retry automatically on reconnect.
@@ -194,6 +197,36 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
 
   return (
     <div className="animate-fade-in">
+      {/* Top-level sections: Call Tracking (default) / Leads Import */}
+      <div className="flex rounded-lg border border-asg-border bg-white p-0.5">
+        <button
+          onClick={() => setPageTab("tracking")}
+          aria-pressed={pageTab === "tracking"}
+          className={cn(
+            "flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium",
+            pageTab === "tracking" ? "bg-asg-cream text-asg-text" : "text-asg-text-secondary"
+          )}
+        >
+          <Phone className="h-4 w-4" /> Call Tracking
+        </button>
+        {canImport && (
+          <button
+            onClick={() => setPageTab("import")}
+            aria-pressed={pageTab === "import"}
+            className={cn(
+              "flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium",
+              pageTab === "import" ? "bg-asg-cream text-asg-text" : "text-asg-text-secondary"
+            )}
+          >
+            <FilePlus2 className="h-4 w-4" /> Leads Import
+          </button>
+        )}
+      </div>
+
+      {pageTab === "import" ? (
+        <SurveyImportEmbedded />
+      ) : (
+      <>
       <div className="flex flex-col gap-4 border-b border-asg-border pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-asg-text lg:text-3xl">Leads</h1>
@@ -210,10 +243,6 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
           </div>
           {(isManager || isAdmin) && (
             <>
-              <Link href="/leads/import" className="asg-button-secondary">
-                <FilePlus2 className="h-4 w-4" />
-                Survey Import
-              </Link>
               <Link href="/leads/new" className="asg-button-primary">
                 <Plus className="h-4 w-4" />
                 Add Lead
@@ -386,11 +415,18 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
 
-// Swipeable mobile lead card: swipe left reveals Call / View actions (touch-first, no drag-drop needed)
+// The Leads Import tab content — survey batch entry embedded in the page.
+function SurveyImportEmbedded() {
+  return (
+    <SurveyImportForm embedded />
+  );
+}
 function SwipeableLeadCard({ lead }: { lead: Lead }) {
   const [offset, setOffset] = useState(0);
   const [open, setOpen] = useState(false);
