@@ -10,9 +10,10 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/status-badge";
+import { KanbanBoard } from "@/components/kanban-board";
 import { EmptyState } from "@/components/empty-state";
 import { LeadStatus, LeadSource } from "@/lib/types";
-import { Search, Phone, Calendar, Plus, MoreHorizontal, User, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Search, Phone, Calendar, Plus, MoreHorizontal, User, Loader2, AlertCircle, RefreshCw, LayoutList, Columns3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Lead {
@@ -74,6 +75,25 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
   const [repFilter, setRepFilter] = useState<string>(initialView === "my" ? profile?.displayName ?? "All" : "All");
   const [sortBy, setSortBy] = useState<"createdAt" | "nextFollowUpAt" | "name">("createdAt");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [view, setView] = useState<"list" | "board">("list");
+
+  // Kanban status change: POST to the status action, optimistic update on success
+  const handleKanbanStatusChange = useCallback(async (leadId: string, newStatus: LeadStatus, expectedVersion: number): Promise<string | null> => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "status", status: newStatus.toLowerCase().replace(/ /g, "_"), expectedVersion }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 409) return "This lead was just updated elsewhere — tap refresh and try again.";
+      if (!response.ok) return (data as any).error?.message || "Failed to update lead status.";
+      setLeads((prev) => prev.map((l) => (l.leadId === leadId ? { ...l, status: newStatus, version: expectedVersion + 1 } : l)));
+      return null;
+    } catch {
+      return "Network error — check your connection and try again.";
+    }
+  }, []);
 
   // Fetch leads
   const fetchLeads = useCallback(async (append = false) => {
@@ -169,12 +189,22 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
           <h1 className="text-2xl font-semibold text-asg-text lg:text-3xl">Leads</h1>
           <p className="mt-1 text-sm text-asg-text-secondary">Manage and review all leads across your office.</p>
         </div>
-        {(isManager || isAdmin) && (
-          <Link href="/leads/new" className="asg-button-primary">
-            <Plus className="h-4 w-4" />
-            Add Lead
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-lg border border-asg-border bg-white p-0.5">
+            <button onClick={() => setView("list")} className={cn("flex min-h-[40px] items-center gap-1.5 rounded-md px-3 text-sm font-medium", view === "list" ? "bg-asg-cream text-asg-text" : "text-asg-text-secondary")}>
+              <LayoutList className="h-4 w-4" /> List
+            </button>
+            <button onClick={() => setView("board")} className={cn("flex min-h-[40px] items-center gap-1.5 rounded-md px-3 text-sm font-medium", view === "board" ? "bg-asg-cream text-asg-text" : "text-asg-text-secondary")}>
+              <Columns3 className="h-4 w-4" /> Board
+            </button>
+          </div>
+          {(isManager || isAdmin) && (
+            <Link href="/leads/new" className="asg-button-primary">
+              <Plus className="h-4 w-4" />
+              Add Lead
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 space-y-4">
@@ -223,7 +253,7 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
         </p>
 
         {/* Desktop Table */}
-        <div className="hidden overflow-hidden rounded-xl border border-asg-border bg-white shadow-sm lg:block">
+        <div className={cn("hidden overflow-hidden rounded-xl border border-asg-border bg-white shadow-sm lg:block", view !== "list" && "hidden")}>
           <table className="asg-table">
             <thead>
               <tr>
@@ -304,8 +334,17 @@ export function LeadsClient({ initialView, initialStatus }: LeadsClientProps) {
           )}
         </div>
 
+        {/* Kanban Board (tablet drag / phone accordion) */}
+        {view === "board" && (
+          <KanbanBoard
+            leads={leads}
+            onStatusChange={handleKanbanStatusChange}
+            totalUnmatched={hasMore ? Math.max(0, totalCount - leads.length) : 0}
+          />
+        )}
+
         {/* Mobile Cards — swipe left to reveal Call / View */}
-        <div className="space-y-3 lg:hidden">
+        <div className={cn("space-y-3 lg:hidden", view !== "list" && "hidden")}>
           {leads.map((lead) => (
             <SwipeableLeadCard key={lead.leadId} lead={lead} />
           ))}
