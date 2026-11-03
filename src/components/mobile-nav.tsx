@@ -6,6 +6,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/store";
+import { BrandLogo } from "@/components/brand-logo";
 import {
   LayoutDashboard,
   Users,
@@ -59,9 +60,9 @@ export function MobileNav() {
   return (
     <>
       <header className="fixed left-0 right-0 top-0 z-40 flex h-14 items-center justify-between border-b border-asg-border bg-asg-navy px-4 lg:hidden">
-        <div className="flex flex-col">
-          <span className="text-base font-semibold text-white">ASG Leads</span>
-          <span className="text-[9px] uppercase tracking-[0.1em] text-asg-gold">Amplify Solutions Group</span>
+        <div className="flex items-center gap-2">
+          <BrandLogo className="w-32 shrink-0" />
+          <span className="text-sm font-semibold text-white">ASG Leads</span>
         </div>
         <button
           onClick={() => setIsOpen(true)}
@@ -77,7 +78,10 @@ export function MobileNav() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setIsOpen(false)} />
           <div className="absolute right-0 top-0 h-full w-72 bg-asg-navy shadow-2xl">
             <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
-              <span className="text-base font-semibold text-white">Menu</span>
+              <div className="flex items-center gap-2">
+                <BrandLogo className="w-32" />
+                <span className="text-sm font-semibold text-white">Menu</span>
+              </div>
               <button
                 onClick={() => setIsOpen(false)}
                 className="flex h-9 w-9 items-center justify-center rounded-md text-white hover:bg-white/10"

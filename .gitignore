@@ -62,3 +62,4 @@ ASG Leads Call Management/
 emulator.log
 dev.log
 *.png
+!public/asg-logo.png

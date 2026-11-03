@@ -106,6 +106,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         body.note,
         body.callbackDate,
         body.callbackTime,
+        body.appointmentDateTime,
         body.expectedVersion
       );
       if (result.success) {

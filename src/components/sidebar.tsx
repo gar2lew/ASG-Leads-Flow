@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/store";
+import { BrandLogo } from "@/components/brand-logo";
 import {
   LayoutDashboard,
   Users,
@@ -117,10 +118,10 @@ export function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-asg-border bg-asg-navy lg:flex">
-      <div className="flex h-16 items-center border-b border-white/10 px-6">
-        <div className="flex flex-col">
-          <span className="text-lg font-semibold tracking-tight text-white">ASG Leads</span>
-          <span className="text-[10px] uppercase tracking-[0.12em] text-asg-gold">Amplify Solutions Group</span>
+      <div className="flex h-16 items-center border-b border-white/10 px-4">
+        <div className="flex items-center gap-2">
+          <BrandLogo className="w-36 shrink-0" />
+          <span className="text-sm font-semibold leading-tight text-white">ASG Leads</span>
         </div>
       </div>
 

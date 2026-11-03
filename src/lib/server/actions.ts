@@ -14,6 +14,8 @@ import { isLeadStatus, isLeadSource } from "@/lib/domain/status";
 import type { LeadSourceValue } from "@/lib/domain/status";
 import { validateSession } from "@/lib/auth/session";
 import { getUserProfile } from "@/lib/auth/user-service";
+import { buildAppointmentActivityData, getCallSchedulingError, parseOfficeLocalDateTime } from "@/lib/domain/call-scheduling";
+import { formatZonedTime, officeToTimeZone } from "@/lib/timezone";
 
 const LEADS = COLLECTIONS.LEADS;
 
@@ -385,6 +387,7 @@ export async function saveCallResultAction(
   note: string | undefined,
   callbackDate: string | undefined,
   callbackTime: string | undefined,
+  appointmentDateTime: string | undefined,
   expectedVersion?: number
 ): Promise<LeadActionResult> {
   const actor = await getActor();
@@ -396,16 +399,7 @@ export async function saveCallResultAction(
   const userId = actor.uid;
 
   try {
-    const updates: any = {
-      status: callResult.toLowerCase().replace(/ /g, "_"),
-      lastContactAt: now,
-    };
-
-    if (note) {
-      updates.notes = note;
-    }
-
-    const lead = await db.runTransaction(async (tx) => {
+    const scheduleValidationError = await db.runTransaction(async (tx) => {
       const snap = await tx.get(leadRef);
       if (!snap.exists) throw new Error("Lead not found");
 
@@ -416,8 +410,33 @@ export async function saveCallResultAction(
         throw new Error("VERSION_CONFLICT");
       }
 
-      if (callResult === "Callback" && callbackDate && callbackTime) {
-        const scheduledAt = new Date(`${callbackDate}T${callbackTime}`);
+      const validationError = getCallSchedulingError(
+        callResult,
+        callbackDate ?? "",
+        callbackTime ?? "",
+        appointmentDateTime ?? "",
+        current.officeId,
+      );
+      if (validationError) return validationError;
+
+      const timeZone = officeToTimeZone(current.officeId);
+      const scheduledAt = callResult === "Callback"
+        ? parseOfficeLocalDateTime(`${callbackDate}T${callbackTime}`, current.officeId)
+        : null;
+      const appointmentAt = callResult === "Booked"
+        ? parseOfficeLocalDateTime(appointmentDateTime!, current.officeId)
+        : null;
+
+      const updates: Record<string, unknown> = {
+        status: callResult.toLowerCase().replace(/ /g, "_"),
+        lastContactAt: now,
+      };
+
+      if (note) {
+        updates.notes = note;
+      }
+
+      if (callResult === "Callback" && scheduledAt) {
         updates.nextFollowUpAt = scheduledAt;
 
         const followUpRef = db.collection(COLLECTIONS.FOLLOW_UPS).doc();
@@ -437,34 +456,47 @@ export async function saveCallResultAction(
           completedBy: null,
         });
 
-        tx.update(leadRef, {
-          ...updates,
-          updatedAt: now,
-          updatedBy: userId,
-          version: currentVersion + 1,
-        });
-
         tx.set(db.collection(LEADS).doc(leadId).collection("activities").doc(), {
           activityId: crypto.randomUUID(),
           leadId,
           type: "follow_up_scheduled",
-          description: `Callback scheduled for ${scheduledAt.toLocaleString("en-AU")}`,
+          description: `Callback scheduled for ${formatZonedTime(scheduledAt, timeZone, {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })}`,
           createdAt: now,
           createdBy: userId,
           metadata: { callResult, scheduledAt },
         });
-
-        return { ...current, ...updates, updatedAt: now, updatedBy: userId, version: currentVersion + 1 };
-      } else {
-        tx.update(leadRef, {
-          ...updates,
-          updatedAt: now,
-          updatedBy: userId,
-          version: currentVersion + 1,
-        });
-        return { ...current, ...updates, updatedAt: now, updatedBy: userId, version: currentVersion + 1 };
       }
+
+      tx.update(leadRef, {
+        ...updates,
+        updatedAt: now,
+        updatedBy: userId,
+        version: currentVersion + 1,
+      });
+
+      if (callResult === "Booked" && appointmentAt) {
+        const appointmentActivityRef = leadRef.collection("activities").doc();
+        tx.set(appointmentActivityRef, {
+          activityId: appointmentActivityRef.id,
+          leadId,
+          ...buildAppointmentActivityData(appointmentAt, current.officeId),
+          createdAt: now,
+          createdBy: userId,
+        });
+      }
+
+      return null;
     });
+
+    if (scheduleValidationError) {
+      return { success: false, error: scheduleValidationError };
+    }
 
     await db.collection(LEADS).doc(leadId).collection("activities").add({
       activityId: crypto.randomUUID(),

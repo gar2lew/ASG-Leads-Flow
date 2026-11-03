@@ -9,9 +9,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { MetricCard } from "@/components/metric-card";
 import { StatusBadge } from "@/components/status-badge";
-import { Phone, Calendar, Users, ClipboardList, ArrowRight, Clock, TrendingUp, Building2, AlertCircle } from "lucide-react";
+import { Phone, Calendar, Users, ClipboardList, ArrowRight, Clock, Building2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LEAD_STATUSES, LEAD_STATUS_LABELS } from "@/lib/domain/status";
+import { ExecutiveSnapshot } from "@/components/executive-snapshot";
 
 const STATUS_TILES = LEAD_STATUSES.map((v) => ({ value: v, label: LEAD_STATUS_LABELS[v] }));
 
@@ -142,7 +143,9 @@ export default function DashboardClient() {
             })}
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-asg-text lg:text-3xl">
-            Good morning, {profile?.displayName?.split(" ")[0] ?? "there"}
+            {isManager || isAdmin
+              ? "Executive Overview"
+              : `Good morning, ${profile?.displayName?.split(" ")[0] ?? "there"}`}
           </h1>
           <p className="mt-1 flex items-center gap-2 text-sm text-asg-text-secondary">
             <Building2 className="h-4 w-4" />
@@ -235,6 +238,16 @@ export default function DashboardClient() {
 
       {(isManager || isAdmin) && (
         <>
+          <ExecutiveSnapshot
+            metrics={{
+              totalLeads: metrics.officeLeadCounts.perth + metrics.officeLeadCounts.brisbane,
+              bookedLeads: metrics.bookedLeads,
+              followUpsDue: metrics.followUpsDue,
+              newLeads: metrics.newLeads,
+            }}
+            callbacks={upcomingCallbacks}
+          />
+
           {/* Pipeline at a glance — per-status counts, tap to open the board */}
           <div className="mt-6 asg-card">
             <div className="flex items-center justify-between border-b border-asg-border px-5 py-4">
@@ -257,17 +270,9 @@ export default function DashboardClient() {
             </div>
           </div>
 
-          {/* Metrics — compact */}
-          <div className="mt-6 grid gap-3 grid-cols-2 xl:grid-cols-4">
-            <MetricCard icon={Users} label="Total Leads" value={metrics.officeLeadCounts.perth + metrics.officeLeadCounts.brisbane} accent="navy" />
-            <MetricCard icon={Calendar} label="Bookings This Week" value={metrics.bookedLeads} accent="gold" />
-            <MetricCard icon={Clock} label="Follow Ups Due" value={metrics.followUpsDue} accent="gold" />
-            <MetricCard icon={TrendingUp} label="New Leads" value={metrics.newLeads} accent="success" />
-          </div>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="mt-6">
             {/* Recent lead activity — dense tile grid with tap-to-call */}
-            <div className="asg-card lg:col-span-2">
+            <div className="asg-card">
               <div className="flex items-center justify-between border-b border-asg-border px-5 py-4">
                 <h2 className="font-semibold text-asg-text">Recent Lead Activity</h2>
                 <Link href="/leads" className="flex items-center gap-1 text-sm font-medium text-asg-gold-dark hover:text-asg-gold">
@@ -285,42 +290,6 @@ export default function DashboardClient() {
               </div>
             </div>
 
-            {/* Follow-ups — tappable tiles */}
-            <div className="asg-card">
-              <div className="flex items-center justify-between border-b border-asg-border px-5 py-4">
-                <h2 className="font-semibold text-asg-text">Follow Ups Due</h2>
-                <span className="rounded-full bg-asg-warning/15 px-2 py-0.5 text-xs font-medium text-asg-text-secondary">
-                  {upcomingCallbacks.length}
-                </span>
-              </div>
-              <div className="divide-y divide-asg-border">
-                {upcomingCallbacks.length === 0 ? (
-                  <p className="px-5 py-8 text-center text-sm text-asg-text-secondary">No follow-ups due.</p>
-                ) : (
-                  upcomingCallbacks.map((fu) => (
-                    <Link
-                      key={fu.followUpId}
-                      href={`/leads/${fu.leadId}`}
-                      className="flex min-h-[64px] items-center justify-between px-5 py-3 hover:bg-asg-cream/50"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-asg-text">{fu.leadName ?? fu.leadId}</p>
-                        <p className="truncate text-sm text-asg-text-secondary">
-                          {new Date(fu.scheduledAt).toLocaleString("en-AU", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
-                          {fu.assignedRepName ? ` · ${fu.assignedRepName}` : ""}
-                        </p>
-                      </div>
-                      <Phone className="h-4 w-4 shrink-0 text-asg-gold-dark" />
-                    </Link>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
 
           {isAdmin && (

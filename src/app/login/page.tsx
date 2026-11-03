@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { BrandLogo } from "@/components/brand-logo";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
@@ -65,9 +66,9 @@ export default function LoginPage() {
       <div className="grid min-h-screen lg:grid-cols-2">
         <div className="relative flex flex-col justify-between bg-asg-navy px-8 py-12 text-white lg:px-16">
           <div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-semibold tracking-tight">ASG Leads</span>
-              <span className="text-xs uppercase tracking-[0.14em] text-asg-gold">Amplify Solutions Group</span>
+            <div>
+              <BrandLogo className="w-56" />
+              <p className="mt-2 text-sm font-semibold text-asg-gold">ASG Leads</p>
             </div>
           </div>
           <div className="max-w-md">
@@ -147,9 +148,9 @@ export default function LoginPage() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative flex flex-col justify-between bg-asg-navy px-8 py-12 text-white lg:px-16">
         <div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-semibold tracking-tight">ASG Leads</span>
-            <span className="text-xs uppercase tracking-[0.14em] text-asg-gold">Amplify Solutions Group</span>
+          <div>
+            <BrandLogo className="w-56" />
+            <p className="mt-2 text-sm font-semibold text-asg-gold">ASG Leads</p>
           </div>
         </div>
 

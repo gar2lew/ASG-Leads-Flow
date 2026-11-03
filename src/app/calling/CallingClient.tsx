@@ -11,6 +11,8 @@ import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/status-badge";
 import { Phone, SkipBack, SkipForward, Loader2, Shield, XCircle, AlertCircle, Home, PiggyBank, Briefcase, User, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getCallSchedulingError } from "@/lib/domain/call-scheduling";
+import { officeToTimeZone } from "@/lib/timezone";
 
 interface Lead {
   leadId: string;
@@ -62,7 +64,7 @@ export function CallingClient() {
   const [note, setNote] = useState("");
   const [callbackDate, setCallbackDate] = useState("");
   const [callbackTime, setCallbackTime] = useState("");
-  const [bookingDate, setBookingDate] = useState("");
+  const [appointmentDateTime, setAppointmentDateTime] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch call queue
@@ -193,9 +195,21 @@ export function CallingClient() {
   }, [index, queue, profile, acquireClaim]);
 
   const lead = queue[index];
+  const scheduleError = lead
+    ? getCallSchedulingError(
+        result,
+        callbackDate,
+        callbackTime,
+        appointmentDateTime,
+        lead.officeId,
+      )
+    : null;
+  const officeTimeLabel = lead
+    ? `${officeToTimeZone(lead.officeId).replace("Australia/", "")} time`
+    : "office local time";
 
   const handleSaveAndNext = async () => {
-    if (!result || !lead || !profile) return;
+    if (!result || !lead || !profile || scheduleError) return;
     setIsSaving(true);
     try {
       const response = await fetch(`/api/leads/${lead.leadId}`, {
@@ -207,6 +221,7 @@ export function CallingClient() {
           note: note || undefined,
           callbackDate: callbackDate || undefined,
           callbackTime: callbackTime || undefined,
+          appointmentDateTime: appointmentDateTime || undefined,
           expectedVersion: lead.version,
         }),
       });
@@ -229,7 +244,7 @@ export function CallingClient() {
           setNote("");
           setCallbackDate("");
           setCallbackTime("");
-          setBookingDate("");
+          setAppointmentDateTime("");
         } else {
           setError("Failed to save call result");
         }
@@ -301,7 +316,7 @@ export function CallingClient() {
     lead.activeCallLease.claimedBy !== profile?.uid;
 
   return (
-    <div className="animate-fade-in mx-auto max-w-2xl">
+    <div className="animate-fade-in mx-auto max-w-6xl">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-asg-text">Call Queue</h1>
         <p className="text-sm text-asg-text-muted">
@@ -322,7 +337,7 @@ export function CallingClient() {
             <div>
               <p className="text-xs uppercase tracking-wider text-asg-gold">Now Calling</p>
               <h2 className="mt-1 text-2xl font-semibold">{lead?.name}</h2>
-              <a href={`tel:${lead?.mobile.replace(/\s/g, "")}`} className="mt-1 flex items-center gap-2 text-lg text-white/90 hover:text-asg-gold">
+              <a href={`tel:${lead?.mobile.replace(/\s/g, "")}`} className="mt-1 flex min-h-11 w-fit items-center gap-2 rounded-md pr-2 text-lg text-white/90 hover:text-asg-gold">
                 <Phone className="h-5 w-5" />
                 {lead?.mobile}
               </a>
@@ -347,74 +362,78 @@ export function CallingClient() {
           </div>
         )}
 
-        <div className="space-y-4 p-5">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2 rounded-lg border border-asg-border bg-asg-cream/50 px-3 py-2.5">
-              <Home className="h-4 w-4 text-asg-gold" />
-              <span className="text-asg-text-secondary">{lead?.renterOwner || "—"}</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-asg-border bg-asg-cream/50 px-3 py-2.5">
-              <PiggyBank className="h-4 w-4 text-asg-gold" />
-              <span className="text-asg-text-secondary">{lead?.superannuation || "—"}</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-asg-border bg-asg-cream/50 px-3 py-2.5">
-              <Briefcase className="h-4 w-4 text-asg-gold" />
-              <span className="text-asg-text-secondary">{lead?.employmentStatus || "—"}</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-asg-border bg-asg-cream/50 px-3 py-2.5">
-              <User className="h-4 w-4 text-asg-gold" />
-              <span className="text-asg-text-secondary">{lead?.officeId}</span>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-asg-text">Source</p>
-            <p className="text-sm text-asg-text-secondary">{lead?.source}</p>
-          </div>
-
-          {lead?.surveyRatings && Object.values(lead.surveyRatings).some((v) => v != null) && (
-            <div className="rounded-lg border border-asg-border bg-asg-cream/50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-asg-text-secondary">Survey Ratings</p>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-                {([
-                  ["Cost of Living", lead.surveyRatings.costOfLiving],
-                  ["Too Much Tax", lead.surveyRatings.tooMuchTax],
-                  ["Renter/Owner", lead.surveyRatings.renterOwner],
-                  ["FT/PT", lead.surveyRatings.ftPt],
-                  ["Super", lead.surveyRatings.superannuation],
-                ] as [string, number | null | undefined][]).filter(([, v]) => v != null).map(([label, v]) => (
-                  <div key={label} className="rounded-mdborder border-asg-border bg-white px-2.5 py-1.5">
-                    <span className="text-xs text-asg-text-muted">{label}</span>
-                    <span className="ml-1.5 font-medium text-asg-text">{v}/10</span>
-                  </div>
-                ))}
+        <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2 rounded-lg border border-asg-border bg-asg-cream/50 px-3 py-2.5">
+                <Home className="h-4 w-4 text-asg-gold" />
+                <span className="text-asg-text-secondary">{lead?.renterOwner || "—"}</span>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border border-asg-border bg-asg-cream/50 px-3 py-2.5">
+                <PiggyBank className="h-4 w-4 text-asg-gold" />
+                <span className="text-asg-text-secondary">{lead?.superannuation || "—"}</span>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border border-asg-border bg-asg-cream/50 px-3 py-2.5">
+                <Briefcase className="h-4 w-4 text-asg-gold" />
+                <span className="text-asg-text-secondary">{lead?.employmentStatus || "—"}</span>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border border-asg-border bg-asg-cream/50 px-3 py-2.5">
+                <User className="h-4 w-4 text-asg-gold" />
+                <span className="text-asg-text-secondary">{lead?.officeId}</span>
               </div>
             </div>
-          )}
 
-          {(lead?.costOfLivingResponse !== undefined || lead?.taxResponse !== undefined) && (
-            <div className="rounded-lg border border-asg-border bg-asg-cream/50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-asg-text-secondary">Survey Information</p>
-              <div className="mt-2 space-y-1 text-sm">
-                {lead?.costOfLivingResponse !== undefined && (
-                  <p className="text-asg-text-secondary">Cost of Living Increased: <span className="font-medium text-asg-text">{lead.costOfLivingResponse ? "Yes" : "No"}</span></p>
-                )}
-                {lead?.taxResponse !== undefined && (
-                  <p className="text-asg-text-secondary">Too Much Tax: <span className="font-medium text-asg-text">{lead.taxResponse ? "Yes" : "No"}</span></p>
-                )}
-              </div>
+            <div>
+              <p className="text-sm font-medium text-asg-text">Source</p>
+              <p className="text-sm text-asg-text-secondary">{lead?.source}</p>
             </div>
-          )}
 
-          <div>
-            <p className="text-sm font-medium text-asg-text">Call Result</p>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {lead?.surveyRatings && Object.values(lead.surveyRatings).some((v) => v != null) && (
+              <div className="rounded-lg border border-asg-border bg-asg-cream/50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-asg-text-secondary">Survey Ratings</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                  {([
+                    ["Cost of Living", lead.surveyRatings.costOfLiving],
+                    ["Too Much Tax", lead.surveyRatings.tooMuchTax],
+                    ["Renter/Owner", lead.surveyRatings.renterOwner],
+                    ["FT/PT", lead.surveyRatings.ftPt],
+                    ["Super", lead.surveyRatings.superannuation],
+                  ] as [string, number | null | undefined][]).filter(([, v]) => v != null).map(([label, v]) => (
+                    <div key={label} className="rounded-md border border-asg-border bg-white px-2.5 py-1.5">
+                      <span className="text-xs text-asg-text-muted">{label}</span>
+                      <span className="ml-1.5 font-medium text-asg-text">{v}/10</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(lead?.costOfLivingResponse !== undefined || lead?.taxResponse !== undefined) && (
+              <div className="rounded-lg border border-asg-border bg-asg-cream/50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-asg-text-secondary">Survey Information</p>
+                <div className="mt-2 space-y-1 text-sm">
+                  {lead?.costOfLivingResponse !== undefined && (
+                    <p className="text-asg-text-secondary">Cost of Living Increased: <span className="font-medium text-asg-text">{lead.costOfLivingResponse ? "Yes" : "No"}</span></p>
+                  )}
+                  {lead?.taxResponse !== undefined && (
+                    <p className="text-asg-text-secondary">Too Much Tax: <span className="font-medium text-asg-text">{lead.taxResponse ? "Yes" : "No"}</span></p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div role="group" aria-label="Call result">
+              <p className="text-sm font-medium text-asg-text">Call Result</p>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {CALL_RESULTS.map((r) => (
                 <button
                   key={r}
                   onClick={() => setResult(r)}
+                  aria-pressed={result === r}
                   className={cn(
-                    "rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
+                    "min-h-12 rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
                     result === r ? "border-asg-gold bg-asg-gold-subtle text-asg-gold-dark" : "border-asg-border bg-white text-asg-text hover:border-asg-gold"
                   )}
                 >
@@ -427,8 +446,9 @@ export function CallingClient() {
           {result && (
             <div className="animate-fade-in space-y-4 border-t border-asg-border pt-4">
               <div>
-                <label className="block text-sm font-medium text-asg-text">Notes</label>
+                <label htmlFor="call-note" className="block text-sm font-medium text-asg-text">Notes</label>
                 <textarea
+                  id="call-note"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
@@ -440,31 +460,35 @@ export function CallingClient() {
               {result === "Callback" && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-asg-text">Callback Date</label>
-                    <input type="date" value={callbackDate} onChange={(e) => setCallbackDate(e.target.value)} className="asg-input mt-1" />
+                    <label htmlFor="callback-date" className="block text-sm font-medium text-asg-text">Callback Date <span className="font-normal text-asg-text-muted">({officeTimeLabel})</span></label>
+                    <input id="callback-date" type="date" required aria-invalid={Boolean(scheduleError)} value={callbackDate} onChange={(e) => setCallbackDate(e.target.value)} className="asg-input mt-1 min-h-11" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-asg-text">Callback Time</label>
-                    <input type="time" value={callbackTime} onChange={(e) => setCallbackTime(e.target.value)} className="asg-input mt-1" />
+                    <label htmlFor="callback-time" className="block text-sm font-medium text-asg-text">Callback Time <span className="font-normal text-asg-text-muted">({officeTimeLabel})</span></label>
+                    <input id="callback-time" type="time" required aria-invalid={Boolean(scheduleError)} value={callbackTime} onChange={(e) => setCallbackTime(e.target.value)} className="asg-input mt-1 min-h-11" />
                   </div>
                 </div>
               )}
 
               {result === "Booked" && (
                 <div>
-                  <label className="block text-sm font-medium text-asg-text">Appointment Date & Time</label>
-                  <input type="datetime-local" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} className="asg-input mt-1" />
+                  <label htmlFor="appointment-date-time" className="block text-sm font-medium text-asg-text">Appointment Date & Time <span className="font-normal text-asg-text-muted">({officeTimeLabel})</span></label>
+                  <input id="appointment-date-time" type="datetime-local" required aria-invalid={Boolean(scheduleError)} value={appointmentDateTime} onChange={(e) => setAppointmentDateTime(e.target.value)} className="asg-input mt-1 min-h-11" />
                 </div>
               )}
+
+              {scheduleError && <p role="alert" className="text-sm text-asg-danger">{scheduleError}</p>}
             </div>
           )}
+          </div>
         </div>
+      </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-asg-border bg-asg-cream/30 p-4">
+      <div className="sticky bottom-16 z-30 mt-3 flex items-center justify-between gap-3 rounded-xl border border-asg-border bg-white/95 p-3 shadow-lg backdrop-blur lg:bottom-0 lg:mt-4 lg:p-4">
           <button
             onClick={handlePrevious}
             disabled={index === 0 || isClaimedByOther || claiming}
-            className="asg-button-secondary"
+            className="asg-button-secondary min-h-11"
           >
             <SkipBack className="h-4 w-4" />
             Previous
@@ -472,15 +496,15 @@ export function CallingClient() {
           <button
             onClick={handleSkip}
             disabled={isClaimedByOther || claiming}
-            className="asg-button-ghost"
+            className="asg-button-ghost min-h-11"
           >
             Skip
             <SkipForward className="h-4 w-4" />
           </button>
           <button
             onClick={handleSaveAndNext}
-            disabled={!result || isSaving || isClaimedByOther || claiming}
-            className="asg-button-primary flex-1"
+            disabled={!result || Boolean(scheduleError) || isSaving || isClaimedByOther || claiming}
+            className="asg-button-primary min-h-11 flex-1"
           >
             {isSaving ? (
               <>
@@ -494,7 +518,6 @@ export function CallingClient() {
               </>
             )}
           </button>
-        </div>
       </div>
     </div>
   );
