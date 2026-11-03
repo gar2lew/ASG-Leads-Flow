@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const [metrics, recentLeadsResult] = await Promise.all([
       getDashboardMetrics(),
-      getLeadsForUser({ limit: 6 }),
+      getLeadsForUser({ limit: 12 }),
     ]);
 
     // Resolve rep display names for recent leads
@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
       leadId: l.leadId,
       name: l.name,
       status: l.status,
+      mobile: l.mobile,
+      suburb: l.suburb,
       officeId: l.officeId,
       createdAt: l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt,
       assignedRepId: l.assignedRepId,
